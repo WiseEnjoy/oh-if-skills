@@ -1,6 +1,6 @@
 ---
 name: ssh-password-transfer
-description: "用 SSH 用户名/密码把文件或目录拷贝到远程主机（或取回），处理内网主机（如 <internal-host>）只允许密码登录、且先报 publickey 会打断 SSH 流的坑。用户说 复制到 xxx / scp to host / 拷贝文件到远程 时使用。依赖 sshpass 与 rsync（缺失时 install.sh 自动安装，rsync 装不上退回 scp -O）。"
+description: "用用户名密码把文件或目录拷贝到远程 Linux 主机（或从远程取回），专治只允许密码登录的内网主机。核心：sshpass + rsync 的可续传写法（断了重跑接着传）、必须强制 password 认证的 SSH_OPTS（这类主机先递公钥会把 SSH 流打断，报 Bad packet length）、拷之前先探远程家目录和建目标目录。用户说 复制到 xxx / scp to host / 拷贝文件到远程 时使用。缺 sshpass 或 rsync 时 install.sh 自动装，rsync 装不上退回 scp -O。"
 ---
 
 # ssh-password-transfer（用户名/密码 SSH 拷文件）

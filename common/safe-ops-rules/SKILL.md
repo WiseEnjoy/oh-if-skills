@@ -1,6 +1,6 @@
 ---
 name: safe-ops-rules
-description: "所有任务通用的硬性安全规则，必须在任何破坏性或昂贵操作之前加载：删除/清理/覆盖/回滚文件（rm -rf、clean、wipe）、杀进程（pkill、killall）、失败后重跑。触发词：删除、清理、rm -rf、git ls-files、pkill、增量、重跑、回滚。"
+description: "删文件、杀进程、回滚、失败后重跑之前必须先看的三条硬规则：1) 用 git ls-files / git status 确认文件确实没被跟踪才准删（真实事故：删了 build/ 里入库的 patch，30 分钟构建报废）；2) 失败修复后先跑最便宜的验证（增量、单测），全量只跑一次做证明；3) pkill -f 的模式要写成 [s]etup.py 这种带方括号，否则会匹配到自己这条命令行、把当前 shell 杀掉。触发词：删除、清理、rm -rf、git ls-files、pkill、重跑、回滚。"
 ---
 
 # 安全操作硬规则（通用、无商量余地）
