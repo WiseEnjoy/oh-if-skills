@@ -1,6 +1,6 @@
 ---
 name: long-running-commands
-description: "任何可能超过 2 分钟的任务都必须用 setsid 完全脱离进程组再跑，否则会被 opencode bash 工具的 120 秒超时连进程组一起杀掉。适用：编译、测试、pip/npm 安装、模型/数据集下载、数据迁移、dev server、watch 循环。触发词：后台运行、编译、下载、安装、跑测试、nohup、detach、setsid；或任务死于 \"interrupted by user\" / \"build stopped: interrupted by user\"。"
+description: "预计跑超过 2 分钟的命令（编译、测试、pip/npm 安装、模型或数据集下载、数据迁移、dev server、watch 循环）怎么启动和盯着：必须用 setsid 完全脱离进程组并把输出重定向到日志，否则 opencode 的 bash 工具 120 秒一到会连进程组一起杀掉（典型症状 ninja: build stopped: interrupted by user）。包含启动模板、轮询进度、超时后先 ps 确认再决定是否重跑。触发词：后台运行、编译、下载、安装、跑测试、setsid。"
 ---
 
 # 长任务必须完全脱离进程组（setsid）

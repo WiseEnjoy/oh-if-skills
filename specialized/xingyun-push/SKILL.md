@@ -1,6 +1,6 @@
 ---
 name: xingyun-push
-description: "向内部行云仓 coding<internal-domain>:xLLM_AI/xllm.git 推代码时使用：rebase 到其 main、构造能通过平台钩子的提交信息（类型、≥4 词、句号、title-only、尾部换行陷阱）、force-with-lease 推送、子模块指针漂移处理、fetch/rebase 链路故障排查，以及行云 MR 标题与描述规范。触发词：推行云、rebase、提交被钩子拒绝、coding 拉取失败、创建 MR。"
+description: "往行云仓 coding<internal-domain>:xLLM_AI/xllm.git 推代码时的全部规矩，全部来自真实推送失败：提交信息正则（类型限定 + 至少 4 个词 + 以句号结尾 + 只要标题不要正文）、Git 尾部换行导致每个提交必被钩子拒的绕法（用 commit-tree 去掉换行重建）、rebase 到 coding/main 及排障表（fetch 断流、仓库被 shallow、ssh 权限、代理改包）、force-with-lease 推送、子模块指针漂移的两种处置、容器内外 UID 互踩，以及行云 MR 标题与三段式描述模板。触发词：推行云、rebase、提交被钩子拒绝、coding 拉取失败、创建 MR。"
 ---
 
 # 行云推送（xingyun-push）：rebase / 提交 / 推送规范

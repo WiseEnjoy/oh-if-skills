@@ -1,6 +1,6 @@
 ---
 name: opencode-skills-sync
-description: "把本机 opencode 全局技能从 ~/.config/opencode/skills 同步到公共 GitHub 仓 WiseEnjoy/oh-if-skills。用户说 同步技能 / 推 skills / GitHub 报 SKILL.md 的 yaml 语法错误 / 修 frontmatter / 更新技能仓 时使用。强制执行 YAML frontmatter 校验与脱敏规则，防止内网域名、IP、真实用户名和路径被推到公网。"
+description: "把本机 ~/.config/opencode/skills 的技能同步到公共 GitHub 仓 WiseEnjoy/oh-if-skills。包含：SKILL.md 改完必跑的 YAML 校验脚本（description 必须整体加双引号，否则 GitHub 报 mapping values are not allowed here）、技能目录结构与契约（name 等于目录名、依赖段 + install.sh、输出范式块）、逐条脱敏对照表（内网域名、内网 IP、真实用户名、UID、真实路径）、clone/push 的正确命令、发布后 grep 扫描与故障速查。触发词：同步技能、推 skills、SKILL.md 报 yaml 语法错误、修 frontmatter。"
 ---
 
 # opencode-skills-sync（opencode 全局技能同步 + YAML frontmatter 校验）

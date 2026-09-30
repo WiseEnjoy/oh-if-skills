@@ -1,6 +1,6 @@
 ---
 name: gitcode-github-pr
-description: "在 gitcode.com（OpenAPI / Gitee v5 风格）和 github.com（gh CLI）上创建、查询、评论、合并 pull request 的完整流程。用户说 发起PR / 建PR / 提PR / 合并请求 / 创建 pull request / MR、查看或合并 PR 时使用。包含 token 处理、fork 跨仓库 PR 的 head/base 方向、推送前 ls-remote 校验、GitHub 本机连通性与认证方式、以及三平台统一的 PR 标题与描述规范。"
+description: "在 gitcode.com 和 github.com 上创建、查询、评论、合并 pull request 的完整流程。包含：token 存放与调用方式（不进 URL、不进日志）、fork 跨仓库 PR 的 head/base 方向规则（直接推默认分支、不新建分支）、推前 ls-remote 校验、GitHub 本机连通实测结论（SSH 不可用，只能去代理直连 HTTPS，含 DNS 解析到坏 IP 的处置）、gh CLI 用法，以及三平台统一的 PR 小写标题 + 三段式正文模板。用户说 发起PR / 建PR / 提PR / 合并请求 / 查看PR 时使用。"
 ---
 
 # gitcode-github-pr（gitcode / github PR 操作）
