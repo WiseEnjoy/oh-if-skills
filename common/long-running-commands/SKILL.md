@@ -1,9 +1,21 @@
 ---
 name: long-running-commands
-description: "Run ANY long-running task (builds, test suites, pip/npm installs, model or dataset downloads, data migrations, dev servers, watch loops) without it being killed. Use when launching a task in background, when a command exceeds ~2 minutes or the tool timeout, when a background job dies with \"interrupted by user\" / \"build stopped: interrupted by user\", or whenever nohup, &, detach, setsid, 后台运行, 编译, 下载, 安装, 跑测试 come up with the opencode bash tool."
+description: "任何可能超过 2 分钟的任务都必须用 setsid 完全脱离进程组再跑，否则会被 opencode bash 工具的 120 秒超时连进程组一起杀掉。适用：编译、测试、pip/npm 安装、模型/数据集下载、数据迁移、dev server、watch 循环。触发词：后台运行、编译、下载、安装、跑测试、nohup、detach、setsid；或任务死于 \"interrupted by user\" / \"build stopped: interrupted by user\"。"
 ---
 
 # Long-running tasks must be fully detached
+
+## 依赖（首次使用自动安装）
+
+| 依赖 | 检查 | 缺失时 |
+| --- | --- | --- |
+| `setsid` | `command -v setsid` | install.sh 自动安装 util-linux |
+
+**首次使用**：加载本 skill 后、执行任何命令前，先跑一次
+`bash <本skill目录>/install.sh`（幂等，依赖齐全立即退出 0）。
+仍有缺失时脚本会逐项列出，按提示手动安装后再继续。
+`<本skill目录>` = skill 工具输出里的 `Base directory for this skill`。
+
 
 The opencode bash tool has a default 120 s timeout. When a command exceeds the
 timeout, the tool terminates the **entire process group** of that call. This
@@ -14,6 +26,13 @@ scripts — not only builds. Plain backgrounding does not survive it:
   the same process group and is still killed on tool timeout.
 - Symptom after a timed-out launch: `ninja: build stopped: interrupted by user`,
   or any task that "mysteriously" stops a couple of minutes after starting.
+
+
+## 输出范式（所有技能统一）
+
+本 skill 产出的**一切对外内容**（对话回复、PR/MR 描述、评审回复、报错信息、结果汇总）
+必须先按 `common/user-communication` skill 的 Principles 与 Banned patterns 自检后再发出：
+用词准确无歧义、先上下文后结论、证据先行；不满足范式的输出不许发出。
 
 ## Rule
 
