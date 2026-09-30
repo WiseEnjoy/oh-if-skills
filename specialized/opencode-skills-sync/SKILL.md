@@ -130,4 +130,5 @@ done
 | push 报 `CONNECT tunnel failed, response 503` | 走了 `https_proxy` | `env -u https_proxy -u http_proxy` |
 | push 到 `gh-proxy.com/...` 报错/只读 | `~/.gitconfig` 的 insteadOf 改写 | `GIT_CONFIG_GLOBAL=<临时config>` 整体替换 |
 | `Connection to ssh.github.com closed by remote host` | 本机 SSH 到 GitHub 不可用 | 别修了，直接走 HTTPS（见 gitcode-github-pr skill 的连通性表） |
+| push/clone 报 `Failed to connect to github.com port 443` | DNS 解析到不可达 IP（`github.com` 的 A 记录抖动） | `curl --resolve github.com:443:140.82.112.3` 探活，可用就临时写 `/etc/hosts`，push 完删掉 |
 | 覆盖公共仓后出现内网信息 | 直接 cp 本地文件 | 立刻 revert，按第三节重新脱敏后再发 |
