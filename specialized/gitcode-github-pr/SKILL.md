@@ -100,6 +100,12 @@ curl -s "https://api.gitcode.com/api/v5/repos/<owner>/<repo>/pulls/<number>/file
 | HTTPS 走环境 `https_proxy`（`<internal-proxy-host>`） | `CONNECT tunnel failed, response 503`（`github.com` 不在放行名单） | **不可用** |
 | HTTPS 去掉代理直连 `github.com` | 正常 | **clone / fetch / push / raw / API 一律用这条** |
 
+- **DNS 偶发解析到不可达 IP**（实测 2026-09-30：`github.com` → `20.205.243.166` TCP 443 不通，
+  而 `api.github.com` 的 `20.205.243.168` 和 `140.82.112.x` 都通）。表现：clone/push 报
+  `Failed to connect to github.com port 443 after N ms` 或 `Failure when receiving data from the peer`。
+  处理：`env -u https_proxy curl -sS -o /dev/null -w '%{http_code}' --resolve github.com:443:140.82.112.3 https://github.com/`
+  探活，通了就把该 IP 临时追加到 `/etc/hosts`（`140.82.112.3 github.com`），push 完删掉——
+  **用完必须删**，否则 IP 轮换后会踩新的坑；多个 IP 逐个试（140.82.112.x / 113.x / 114.x）。
 - `api.github.com` 两种通道都通；`gh-proxy.com` 只读下载代理，只能 clone 公开仓，**不能 push**。
 - 环境 `https_proxy` 对 gitcode 正常、对 github push 会 503——GitHub 操作统一 `env -u https_proxy -u http_proxy -u HTTPS_PROXY -u HTTP_PROXY`。
 
