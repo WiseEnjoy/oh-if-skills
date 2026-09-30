@@ -1,12 +1,34 @@
 ---
-name: xllm-pr-autofix
-description: "Use when monitoring a Xingyun PR/MR for reviewer comments on xllm (coding<internal-domain>), automatically fixing review feedback, replying to reviewers professionally, and pushing fixes + running self-tests. Covers the full loop: poll MR notes → classify review comments → implement fixes → self-test → commit/push → reply. Requires the MR number."
+name: xingyun-reviewer
+description: "监控行云（coding<internal-domain>）xllm 仓库 MR 的评审意见并自动处理：拉取评审评论、分类（改代码 / 提问 / 确认 / CI 问题 / 格式 / 无关）、修复并自测、提交推送、按讨论线程逐条专业回复，直到所有评审线程关闭。用户说 处理评审意见 / 回复 reviewer / 监控 MR 时使用，需要 MR 编号。"
 ---
 
-# xLLM PR Auto-Fix (行云 PR 检视意见自动修复)
+# xingyun-reviewer (行云 MR 检视意见自动处理)
+
+## 依赖（首次使用自动安装）
+
+| 依赖 | 检查 | 缺失时 |
+| --- | --- | --- |
+| `coding-cli` | `command -v coding-cli` | 缺失时 install.sh 从本机已有副本建软链 |
+| `python3` | `command -v python3` | 环境预装，install.sh 自检 |
+| `git` | `command -v git` | 环境预装，install.sh 自检 |
+| `docker` | `command -v docker` | 可选：容器内执行 git/自测时才需要 |
+
+**首次使用**：加载本 skill 后、执行任何命令前，先跑一次
+`bash <本skill目录>/install.sh`（幂等，依赖齐全立即退出 0）。
+仍有缺失时脚本会逐项列出，按提示手动安装后再继续。
+`<本skill目录>` = skill 工具输出里的 `Base directory for this skill`。
+
 
 Monitor a Xingyun MR, process reviewer feedback, fix code, self-test, push, and
 reply to reviewers. The loop runs until all review threads are resolved.
+
+
+## 输出范式（所有技能统一）
+
+本 skill 产出的**一切对外内容**（对话回复、PR/MR 描述、评审回复、报错信息、结果汇总）
+必须先按 `common/user-communication` skill 的 Principles 与 Banned patterns 自检后再发出：
+用词准确无歧义、先上下文后结论、证据先行；不满足范式的输出不许发出。
 
 ## Prerequisites
 

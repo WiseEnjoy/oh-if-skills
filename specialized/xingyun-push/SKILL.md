@@ -1,19 +1,40 @@
 ---
 name: xingyun-push
-description: "Use when pushing to the JD internal Xingyun repo (coding<internal-domain>:xLLM_AI/xllm.git), rebasing onto its main, creating commits that must pass the platform push rules, creating PRs/MRs on Xingyun, or troubleshooting coding<internal-domain> fetch/push failures (message-format rejections, transfer corruption, submodule validator blocks)."
+description: "向内部行云仓 coding<internal-domain>:xLLM_AI/xllm.git 推代码时使用：rebase 到其 main、构造能通过平台钩子的提交信息（类型、≥4 词、句号、title-only、尾部换行陷阱）、force-with-lease 推送、子模块指针漂移处理、fetch/rebase 链路故障排查，以及行云 MR 标题与描述规范。触发词：推行云、rebase、提交被钩子拒绝、coding 拉取失败、创建 MR。"
 ---
 
 # Xingyun Push (星云仓 rebase / 提交 / 推送规范)
 
+## 依赖（首次使用自动安装）
+
+| 依赖 | 检查 | 缺失时 |
+| --- | --- | --- |
+| `git` | `command -v git` | 环境预装，install.sh 自检 |
+| `python3` | `command -v python3` | 环境预装，install.sh 自检 |
+| `coding-cli` | `command -v coding-cli` | 缺失时 install.sh 从本机已有副本建软链 |
+
+**首次使用**：加载本 skill 后、执行任何命令前，先跑一次
+`bash <本skill目录>/install.sh`（幂等，依赖齐全立即退出 0）。
+仍有缺失时脚本会逐项列出，按提示手动安装后再继续。
+`<本skill目录>` = skill 工具输出里的 `Base directory for this skill`。
+
+
 Distilled from real push failures on `coding<internal-domain>:xLLM_AI/xllm.git`. Follow
 these rules exactly — the platform enforces them with server-side hooks.
+
+
+## 输出范式（所有技能统一）
+
+本 skill 产出的**一切对外内容**（对话回复、PR/MR 描述、评审回复、报错信息、结果汇总）
+必须先按 `common/user-communication` skill 的 Principles 与 Banned patterns 自检后再发出：
+用词准确无歧义、先上下文后结论、证据先行；不满足范式的输出不许发出。
 
 ## Identity (提交身份)
 
 Verify before committing (repo-local config, already set):
 
 ```
-user.name  = <your-name>
+user.name  = <your-username>
 user.email = <your-email>
 ```
 
@@ -157,16 +178,20 @@ the user's actual intent at the time.
 > **边界**：本规范只约束 **PR/MR 标题与描述**，提交信息仍按上方「Commit message format」执行，
 > 两者互不影响。
 
-**标题**：间接直白、用最精简准确的话描述 PR 主题，**纯英文**。
+**标题**：间接直白、用最精简准确的话描述 PR 主题，**纯英文，统一用小写英文单词**
+（`type: 小写描述.`，如 `bugfix: cap launch blocks for kernels.`，与本仓提交信息同风格；不要句首大写）。
+
+**平台差异**：行云 MR 是**同仓库内不同分支**做 PR；gitcode/github 是**跨仓库**（fork → 上游），
+推送直接推到默认分支、不新建分支——那套规则见 gitcode-github-pr skill，别混用。
 
 **正文三段式**（内容用中文，每段带 emoji + 英文关键字，顺序：why → what → verification）：
 
-1. **# 🎯 改动说明**（why）：背景与原因，讲为什么需要这个改动。
-2. **# 🔧 主要改动**（what）：改了什么，用 `-` 列表逐条列出。
-3. **# ✅ 测试覆盖**（verification）：怎么证明改动正确，附真实命令输出。
+1. **## 🎯 改动说明**（why）：背景与原因，讲为什么需要这个改动。
+2. **## 🔧 主要改动**（what）：改了什么，用 `-` 列表逐条列出。
+3. **## ✅ 测试覆盖**（verification）：怎么证明改动正确，附真实命令输出。
 
 **格式规范**：
-- 三段标题用 `# 改动说明` / `# 主要改动` / `# 测试覆盖`（h1，与现有 MR 保持一致）
+- 三段标题用 `## 🎯 改动说明` / `## 🔧 主要改动` / `## ✅ 测试覆盖`（**h2**，与现有 MR 一致；h1 字号过大，不要用 `#`）
 - 改动条目用 `-` 无序列表，每条一句话
 - 测试输出用代码块（\`\`\`包裹），截取关键行
 - 可用 emoji 增强可读性：🔧 改动、✅ 通过、📊 数据、⚠️ 注意
@@ -182,11 +207,11 @@ the user's actual intent at the time.
   --source-branch feat/xxx \
   --base main \
   --title "feat: xxx yyy zzz www." \
-  -b "# 改动说明
+  -b "## 🎯 改动说明
 ...
-# 主要改动
+## 🔧 主要改动
 ...
-# 测试覆盖
+## ✅ 测试覆盖
 ..." \
   -R xLLM_AI/xllm
 
@@ -204,13 +229,13 @@ API 调用时项目 ID 用数字（xllm = 958063），不用 URL 编码的路径
 
 ## 容器内外用户 ID 不一致（共享挂载的权限互踩）
 
-`<shared-mount>` 是宿主机与容器的共享挂载。**宿主机用户 UID=<your-uid>，
+`/export/home` 是宿主机与容器的共享挂载。**宿主机用户 UID=<your-uid>（<your-username>），
 容器内默认 root（UID=0）**——两边写同一份 `.git/` 和 `~/.ssh/`，属主互踩是常态：
 
 | 谁写的 | 后果 | 修复 |
 | --- | --- | --- |
-| 容器 root 写 `.git/` | 宿主机 `Permission denied`（如 `packed-refs`/`index` 读不了） | 容器内：`chown -R <uid>:<gid> <your-xllm-repo>/.git` |
-| 宿主机 1012 写 `.git/` | 容器内 git 仍可用（root 无视权限），但 `git config --global` 读的是 `/root/.gitconfig` 而非共享目录的 | 通常无问题 |
+| 容器 root 写 `.git/` | 宿主机 `Permission denied`（如 `packed-refs`/`index` 读不了） | 容器内：`chown -R <your-uid>:<your-uid> <your-xllm-repo>/.git` |
+| 宿主机 <your-uid> 写 `.git/` | 容器内 git 仍可用（root 无视权限），但 `git config --global` 读的是 `/root/.gitconfig` 而非共享目录的 | 通常无问题 |
 | 容器 root 写 `~/.ssh/`（容器内 `/root/.ssh`） | `Bad owner or permissions on /root/.ssh/config` → SSH 全挂 | 容器内：`chown -R root:root /root/.ssh && chmod 700 /root/.ssh && chmod 600 /root/.ssh/id_* && chmod 644 /root/.ssh/known_hosts` |
 | 宿主机操作后 `~/.ssh/known_hosts` 不可读 | coding-cli `git ls-remote` 失败 | 宿主机：`chmod 644 ~/.ssh/known_hosts && chmod 700 ~/.ssh` |
 
@@ -222,4 +247,4 @@ API 调用时项目 ID 用数字（xllm = 958063），不用 URL 编码的路径
 1. **提交、推送、创建 PR 优先在容器内做**（pre-commit 钩子、SSH 密钥、coding-cli 认证都在容器内）
 2. 宿主机 git 操作仅限查看（`git log`/`git diff`/`git status`）
 3. 如果宿主机必须提交，用 `git commit --no-verify`（跳过 pre-commit），提交后必须 `git log --oneline -1` 确认成功（钩子失败是静默的）
-4. 任何一侧操作完 git 后，在容器内跑一次 `chown -R <uid>:<gid> <your-xllm-repo>/.git` 归权
+4. 任何一侧操作完 git 后，在容器内跑一次 `chown -R <your-uid>:<your-uid> <your-xllm-repo>/.git` 归权

@@ -1,14 +1,33 @@
 ---
 name: safe-ops-rules
-description: "Universal safety rules for ALL tasks. Use BEFORE any destructive or costly operation — deleting/cleaning/overwriting files (rm -rf, clean, wipe), killing processes (pkill, killall), re-running expensive jobs after a failure, or reverting changes. Trigger keywords: 删除, 清理, rm -rf, git ls-files, pkill, 增量, 重跑, 回滚."
+description: "所有任务通用的硬性安全规则，必须在任何破坏性或昂贵操作之前加载：删除/清理/覆盖/回滚文件（rm -rf、clean、wipe）、杀进程（pkill、killall）、失败后重跑。触发词：删除、清理、rm -rf、git ls-files、pkill、增量、重跑、回滚。"
 ---
 
 # Safe Operations Rules (universal, non-negotiable)
+
+## 依赖（首次使用自动安装）
+
+| 依赖 | 检查 | 缺失时 |
+| --- | --- | --- |
+| `git` | `command -v git` | 环境预装，install.sh 自检 |
+
+**首次使用**：加载本 skill 后、执行任何命令前，先跑一次
+`bash <本skill目录>/install.sh`（幂等，依赖齐全立即退出 0）。
+仍有缺失时脚本会逐项列出，按提示手动安装后再继续。
+`<本skill目录>` = skill 工具输出里的 `Base directory for this skill`。
+
 
 Three hard rules distilled from a real incident (2026-09-24: deleted a
 git-tracked patch file that lived inside a directory named `build/`, broke a
 30-min build, then wasted more full rebuilds verifying the fix). These apply
 to EVERY task — not just builds. MUST rules, never suggestions.
+
+
+## 输出范式（所有技能统一）
+
+本 skill 产出的**一切对外内容**（对话回复、PR/MR 描述、评审回复、报错信息、结果汇总）
+必须先按 `common/user-communication` skill 的 Principles 与 Banned patterns 自检后再发出：
+用词准确无歧义、先上下文后结论、证据先行；不满足范式的输出不许发出。
 
 ## Rule 1 — Destructive file ops: verify with git FIRST
 
