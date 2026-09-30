@@ -1,6 +1,6 @@
 ---
 name: xllm-pr-autofix
-description: Use when monitoring a Xingyun PR/MR for reviewer comments on xllm (coding<internal-domain>), automatically fixing review feedback, replying to reviewers professionally, and pushing fixes + running self-tests. Covers the full loop: poll MR notes → classify review comments → implement fixes → self-test → commit/push → reply. Requires the MR number.
+description: "Use when monitoring a Xingyun PR/MR for reviewer comments on xllm (coding<internal-domain>), automatically fixing review feedback, replying to reviewers professionally, and pushing fixes + running self-tests. Covers the full loop: poll MR notes → classify review comments → implement fixes → self-test → commit/push → reply. Requires the MR number."
 ---
 
 # xLLM PR Auto-Fix (行云 PR 检视意见自动修复)

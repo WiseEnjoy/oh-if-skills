@@ -1,6 +1,6 @@
 ---
 name: git-pr
-description: Create, list, view and merge pull requests on gitcode.com (OpenAPI, Gitee-v5 style) and github.com (gh CLI). Use when the user asks to 发起PR / 建PR / 提PR / 合并请求 / 创建 pull request / MR, list or inspect PRs, or merge a PR on gitcode or github. Covers token handling, fork-based PR flow, and branch-push-before-PR checks.
+description: "Create, list, view and merge pull requests on gitcode.com (OpenAPI, Gitee-v5 style) and github.com (gh CLI). Use when the user asks to 发起PR / 建PR / 提PR / 合并请求 / 创建 pull request / MR, list or inspect PRs, or merge a PR on gitcode or github. Covers token handling, fork-based PR flow, and branch-push-before-PR checks."
 ---
 
 # git-pr (gitcode / github PR operations)

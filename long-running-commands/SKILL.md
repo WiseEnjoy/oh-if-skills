@@ -1,6 +1,6 @@
 ---
 name: long-running-commands
-description: Run ANY long-running task (builds, test suites, pip/npm installs, model or dataset downloads, data migrations, dev servers, watch loops) without it being killed. Use when launching a task in background, when a command exceeds ~2 minutes or the tool timeout, when a background job dies with "interrupted by user" / "build stopped: interrupted by user", or whenever nohup, &, detach, setsid, 后台运行, 编译, 下载, 安装, 跑测试 come up with the opencode bash tool.
+description: "Run ANY long-running task (builds, test suites, pip/npm installs, model or dataset downloads, data migrations, dev servers, watch loops) without it being killed. Use when launching a task in background, when a command exceeds ~2 minutes or the tool timeout, when a background job dies with \"interrupted by user\" / \"build stopped: interrupted by user\", or whenever nohup, &, detach, setsid, 后台运行, 编译, 下载, 安装, 跑测试 come up with the opencode bash tool."
 ---
 
 # Long-running tasks must be fully detached

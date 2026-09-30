@@ -1,6 +1,6 @@
 ---
 name: user-communication
-description: Universal output rules for ALL opencode skills. Ensures every user-facing message (chat replies, PR/MR descriptions, review comment replies, error messages, log summaries) uses clear, accurate, user-comprehensible language. No invented jargon, no ambiguous abbreviations, no context-free statements.
+description: "Universal output rules for ALL opencode skills. Ensures every user-facing message (chat replies, PR/MR descriptions, review comment replies, error messages, log summaries) uses clear, accurate, user-comprehensible language. No invented jargon, no ambiguous abbreviations, no context-free statements."
 ---
 
 # User Communication Rules

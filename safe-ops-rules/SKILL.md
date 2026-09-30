@@ -1,6 +1,6 @@
 ---
 name: safe-ops-rules
-description: Universal safety rules for ALL tasks. Use BEFORE any destructive or costly operation — deleting/cleaning/overwriting files (rm -rf, clean, wipe), killing processes (pkill, killall), re-running expensive jobs after a failure, or reverting changes. Trigger keywords: 删除, 清理, rm -rf, git ls-files, pkill, 增量, 重跑, 回滚.
+description: "Universal safety rules for ALL tasks. Use BEFORE any destructive or costly operation — deleting/cleaning/overwriting files (rm -rf, clean, wipe), killing processes (pkill, killall), re-running expensive jobs after a failure, or reverting changes. Trigger keywords: 删除, 清理, rm -rf, git ls-files, pkill, 增量, 重跑, 回滚."
 ---
 
 # Safe Operations Rules (universal, non-negotiable)

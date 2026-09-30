@@ -1,6 +1,6 @@
 ---
 name: xingyun-push
-description: Use when pushing to the JD internal Xingyun repo (coding<internal-domain>:xLLM_AI/xllm.git), rebasing onto its main, creating commits that must pass the platform push rules, creating PRs/MRs on Xingyun, or troubleshooting coding<internal-domain> fetch/push failures (message-format rejections, transfer corruption, submodule validator blocks).
+description: "Use when pushing to the JD internal Xingyun repo (coding<internal-domain>:xLLM_AI/xllm.git), rebasing onto its main, creating commits that must pass the platform push rules, creating PRs/MRs on Xingyun, or troubleshooting coding<internal-domain> fetch/push failures (message-format rejections, transfer corruption, submodule validator blocks)."
 ---
 
 # Xingyun Push (星云仓 rebase / 提交 / 推送规范)
