@@ -1,6 +1,6 @@
 ---
 name: scp-transfer
-description: Use when the user wants to copy files to/from a remote server over SSH with a username/password (e.g. "复制到 xxx", "scp to host", "拷贝文件到远程"). Handles the password-auth SSH quirk needed for JD internal hosts like <internal-host>.
+description: "Use when the user wants to copy files to/from a remote server over SSH with a username/password (e.g. \"复制到 xxx\", \"scp to host\", \"拷贝文件到远程\"). Handles the password-auth SSH quirk needed for JD internal hosts like <internal-host>."
 ---
 
 # scp-transfer
