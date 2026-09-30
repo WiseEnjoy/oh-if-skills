@@ -3,7 +3,7 @@ name: safe-ops-rules
 description: "所有任务通用的硬性安全规则，必须在任何破坏性或昂贵操作之前加载：删除/清理/覆盖/回滚文件（rm -rf、clean、wipe）、杀进程（pkill、killall）、失败后重跑。触发词：删除、清理、rm -rf、git ls-files、pkill、增量、重跑、回滚。"
 ---
 
-# Safe Operations Rules (universal, non-negotiable)
+# 安全操作硬规则（通用、无商量余地）
 
 ## 依赖（首次使用自动安装）
 
@@ -16,60 +16,53 @@ description: "所有任务通用的硬性安全规则，必须在任何破坏性
 仍有缺失时脚本会逐项列出，按提示手动安装后再继续。
 `<本skill目录>` = skill 工具输出里的 `Base directory for this skill`。
 
-
-Three hard rules distilled from a real incident (2026-09-24: deleted a
-git-tracked patch file that lived inside a directory named `build/`, broke a
-30-min build, then wasted more full rebuilds verifying the fix). These apply
-to EVERY task — not just builds. MUST rules, never suggestions.
-
+三条硬规则，来自真实事故（2026-09-24：删掉了一个放在名为 `build/` 的目录里的、
+被 git 跟踪的 patch 文件，直接打断了 30 分钟的构建，之后又多跑了好几次完整重编
+来验证修复）。这些规则对**每一个**任务都生效——不只构建。是 MUST，不是建议。
 
 ## 输出范式（所有技能统一）
 
 本 skill 产出的**一切对外内容**（对话回复、PR/MR 描述、评审回复、报错信息、结果汇总）
-必须先按 `common/user-communication` skill 的 Principles 与 Banned patterns 自检后再发出：
+必须先按 `common/user-communication` skill 的原则与禁止写法自检后再发出：
 用词准确无歧义、先上下文后结论、证据先行；不满足范式的输出不许发出。
 
-## Rule 1 — Destructive file ops: verify with git FIRST
+## 规则 1 — 破坏性文件操作：先用 git 验证
 
-Before ANY delete / clean / overwrite / revert of files or directories
-(`rm -rf`, wipes, "cleanup", restoring stale state) inside any git repo:
+在任何 git 仓库里做删除 / 清理 / 覆盖 / 回滚（`rm -rf`、wipe、"cleanup"、
+恢复陈旧状态）之前，先跑：
 
 ```bash
-# Run INSIDE the repo, and INSIDE each affected submodule — a submodule's
-# tracked files are invisible to the parent repo's ls-files:
-git ls-files -- <path>          # non-empty output => TRACKED SOURCE, do NOT delete
-git status --short -- <path>    # only '??' entries => genuinely untracked, safe to remove
+# 在仓库里跑，而且每个受影响的子模块里都要跑——子模块里被跟踪的文件
+# 父仓库的 ls-files 看不见：
+git ls-files -- <path>          # 输出非空 => 被跟踪的源码，绝对不能删
+git status --short -- <path>    # 只有 '??' 条目 => 确实未被跟踪，可以删
 ```
 
-- **Tracked files are source code regardless of naming or location.** A
-  directory named `build/` may contain checked-in sources (real case:
-  `third_party/xllm_ops/cmake/third_party/build/modules/patch/*.patch`,
-  consumed by the build; deleting it failed everything downstream).
-- Only `??` untracked paths may be removed. To revert tracked files use
-  `git restore <path>`, never `rm` + hope.
-- Respect the project's designated output/cleanup list if one exists; do NOT
-  invent extra cleanup targets from name heuristics.
+- **只要被跟踪，就是源码，跟文件名、位置无关。** 一个叫 `build/` 的目录
+  里可能放着入库的源码（真实案例：
+  `third_party/xllm_ops/cmake/third_party/build/modules/patch/*.patch`，
+  构建要用；删掉后下游全挂）。
+- 只有 `??` 未跟踪的路径才能删。要回滚被跟踪的文件用 `git restore <path>`，
+  不要 `rm` 完了碰运气。
+- 项目如果指定了输出/清理清单，按清单来；不要凭文件名猜测额外的清理目标。
 
-## Rule 2 — Cheap verification FIRST, expensive runs LAST
+## 规则 2 — 便宜的验证先跑，昂贵的全量最后跑
 
-After any failure, fix the root cause, then:
+任何失败修完根因之后：
 
-1. Re-verify with the cheapest mode that exercises the failing step
-   (incremental build, single test, one module — not the full pipeline).
-2. Only after it passes (通关), run the expensive full/clean run ONCE as
-   end-to-end proof.
+1. 先用最便宜的方式重新验证出问题的那一步（增量构建、单个测试、单个模块，
+   不是整条流水线）。
+2. 只有它通过了，才把昂贵的全量/干净构建**跑一次**，作为端到端的证明。
 
-Never re-launch expensive full runs (clean builds, full test suites) just to
-"check" a fix — iterate cheap, prove once.
+绝不要为了"验证一下修复"反复跑昂贵的全量任务（clean 构建、完整测试套件）
+——用便宜的方式迭代，昂贵的只证明一次。
 
-## Rule 3 — pkill/pgrep self-match trap
+## 规则 3 — pkill/pgrep 自匹配陷阱
 
-`pkill -f "setup.py"` matches the invoking shell's own command line (the
-pattern text is in it) — it kills its own shell and any wrapping
-`docker exec` hangs with no output.
+`pkill -f "setup.py"` 会匹配到发起它的那个 shell 自己的命令行（模式字符串就在里面）
+——它把自己的 shell 杀了，外层的 `docker exec` 就挂在那儿没有任何输出。
 
-- Always bracket the pattern: `pkill -f "[s]etup\.py"`, `pkill -f "[b]isheng"`.
-- Never place a plain `PATTERN` string in the same command line as
-  `pkill -f PATTERN`.
-- Confirm before/after with `pgrep -af` (bracketed); when working through
-  `docker exec`, verify the container is still alive (`docker ps`).
+- 模式一律加方括号：`pkill -f "[s]etup\.py"`、`pkill -f "[b]isheng"`。
+- 绝不要把裸的 `PATTERN` 字符串和 `pkill -f PATTERN` 放在同一条命令行里。
+- 前后都用（加了括号的）`pgrep -af` 确认；通过 `docker exec` 操作时，
+  还要确认容器还活着（`docker ps`）。

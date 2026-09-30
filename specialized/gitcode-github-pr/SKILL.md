@@ -19,11 +19,10 @@ description: "在 gitcode.com（OpenAPI / Gitee v5 风格）和 github.com（gh 
 `<本skill目录>` = skill 工具输出里的 `Base directory for this skill`。
 
 
-
 ## 输出范式（所有技能统一）
 
 本 skill 产出的**一切对外内容**（对话回复、PR/MR 描述、评审回复、报错信息、结果汇总）
-必须先按 `common/user-communication` skill 的 Principles 与 Banned patterns 自检后再发出：
+必须先按 `common/user-communication` skill 的「原则」与「禁止写法」自检后再发出：
 用词准确无歧义、先上下文后结论、证据先行；不满足范式的输出不许发出。
 
 ## 推送目标（gitcode / github 与行云不同，平台差异硬性规则）
@@ -33,7 +32,7 @@ description: "在 gitcode.com（OpenAPI / Gitee v5 风格）和 github.com（gh 
   PR 的 `head` = fork 的默认分支，`base` = 上游仓库的默认分支。
 - 推送后照常 `git ls-remote` 校验远端 sha 与本地一致。
 
-## GitCode (gitcode.com) — xLLM 仓库主平台
+## GitCode（gitcode.com）— xLLM 仓库主平台
 
 - Token：读 `~/.config/opencode/gitcode-token`（600 权限）。**绝不**把 token 打进日志、提交、PR 描述或回显给用户；命令里引用文件即可。
 - API base：`https://api.gitcode.com/api/v5`（Gitee v5 兼容）。机器环境自带 `https_proxy`，curl 直接可用。
@@ -89,7 +88,7 @@ curl -s "https://api.gitcode.com/api/v5/repos/<owner>/<repo>/pulls/<number>/file
   `merge_method`）；先 GET 详情确认 `state` 为 open、无冲突再执行。
 - 若某端点返回 404/405，说明 gitcode 未实现该 v5 子集——改用网页 URL 交由用户操作，不要盲试。
 
-## GitHub
+## GitHub 平台
 
 ### 连通性硬规则（本机实测，别再逐个试）
 
@@ -141,7 +140,7 @@ env -u https_proxy -u http_proxy curl -sS -H "Authorization: Bearer $TOKEN" \
 - API 频率：匿名 60 次/时、带 token 5000 次/时——批量查询先带 token，别裸调。
 - `git ls-remote` 也要在 `env -u https_proxy` 下跑，否则同样 503。
 
-### gh CLI
+### gh CLI 用法
 
 - 已装在 `~/.local/bin/gh`（aarch64）。先 `export PATH="$HOME/.local/bin:$PATH"`；若不存在，
   从 `https://github.com/cli/cli/releases` 下载 `gh_<ver>_linux_<arch>.tar.gz`，

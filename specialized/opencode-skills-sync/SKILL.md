@@ -32,7 +32,7 @@ description: "把本机 opencode 全局技能从 ~/.config/opencode/skills 同�
 ## 输出范式（所有技能统一）
 
 本 skill 产出的**一切对外内容**（对话回复、PR/MR 描述、评审回复、报错信息、结果汇总）
-必须先按 `common/user-communication` skill 的 Principles 与 Banned patterns 自检后再发出：
+必须先按 `common/user-communication` skill 的「原则」与「禁止写法」自检后再发出：
 用词准确无歧义、先上下文后结论、证据先行；不满足范式的输出不许发出。
 
 ## 一、目录结构与技能契约（2026-09-30 起强制）

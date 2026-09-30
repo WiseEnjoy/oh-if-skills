@@ -14,45 +14,40 @@ description: "强制性元规范，不是按需技能：所有技能、所有会
 仍有缺失时脚本会逐项列出，按提示手动安装后再继续。
 `<本skill目录>` = skill 工具输出里的 `Base directory for this skill`。
 
-
 这不是一个"专门的技能"，而是**所有技能输出都必须服从的范式**：
 本 skill 常驻生效（元规范，永远不按场景取舍），约束每一个技能产出的每一段
 对外内容——对话回复、PR/MR 描述、评审回复、报错信息、结果汇总。
 
 其余 7 个技能的正文里都带一块 `## 输出范式（所有技能统一）` 回指本文件；
-任何技能的输出在发出前，必须按本文件的 Principles 与 Banned patterns 自检一遍。
+任何技能的输出在发出前，必须按本文件的「原则」与「禁止写法」自检一遍。
 
-## Principles
+## 原则
 
-1. **User perspective**: explain what happened and what it means for the user,
-   not what the tool internally did. The user cares about outcomes, not
-   mechanism (unless they ask).
+1. **站在用户视角**：讲发生了什么、对用户意味着什么，不要讲工具内部干了什么。
+   用户关心结果，不关心机制（除非他问）。
 
-2. **Accurate terms**: use standard industry terminology correctly. If you
-   need a concept the user may not know, define it in one sentence before
-   using it. Never invent terms, abbreviations, or shorthand.
+2. **术语准确**：标准行业术语要用对。确实要引入一个用户可能不熟的概念，
+   先用一句话定义再用。绝不自造术语、缩写或简称。
 
-3. **No ambiguity**: every statement should have exactly one interpretation.
-   If something is uncertain, say "not confirmed" or state what is known and
-   what is not — never guess silently.
+3. **无歧义**：每句话只能有一种理解。有不确定的，明说"未确认"，
+   或说清已知什么、未知什么——绝不悄悄猜测。
 
-4. **Context before conclusion**: give enough background for the user to
-   evaluate the statement. A bare fact without context forces the user to ask
-   "why?" — provide the why proactively.
+4. **先上下文后结论**：给出足够的背景，让用户能自己评估这个结论。
+   只甩一个事实不给背景，用户只会反问"为什么"——主动把"为什么"讲清楚。
 
-## Banned patterns
+## 禁止写法
 
-| Banned | Why | Instead |
+| 禁止 | 为什么 | 改成 |
 | --- | --- | --- |
-| "已处理" / "done" with no detail | user can't verify | "已修复：具体改了什么，测试结果是什么" |
-| "优化了性能" with no numbers | unverifiable claim | "编译时间从 15 分钟降到 3 分钟（-80%）" |
-| "详见日志" pointing to internal path | user can't access or parse it | quote the relevant 3-5 lines of the log inline |
-| "符合规范" without naming the rule | user can't check | "符合 xllm commit-format.md 中的 `<type>: >=4 words.` 规则" |
-| Invented abbreviations ("OTB", "SRA") | confusing | use the full term, or define once then use consistently |
-| "可能" / "应该" when you have evidence | hedging without cause | "测试证实…" or explicitly "未验证，推断…" |
-| Multiple topics in one paragraph | hard to scan | bullet points, one fact per line |
+| "已处理" / "done"，不给细节 | 用户没法验证 | "已修复：具体改了什么，测试结果是什么" |
+| "优化了性能"，没有数字 | 无法核实的说法 | "编译时间从 15 分钟降到 3 分钟（-80%）" |
+| "详见日志"，指向内部路径 | 用户打不开也读不懂 | 把日志里相关那 3-5 行直接贴出来 |
+| "符合规范"，不说哪条规范 | 用户没法查 | "符合 xllm commit-format.md 中的 `<type>: >=4 words.` 规则" |
+| 自造缩写（"OTB"、"SRA"） | 看不懂 | 用全称；或者只定义一次然后全程一致地用 |
+| 有证据却写"可能" / "应该" | 无依据的含糊 | "测试证实…" 或明确写"未验证，推断…" |
+| 一段里塞多个主题 | 没法扫读 | 用列表，一条一行 |
 
-## Good examples
+## 好/坏示例
 
 ❌ "build fixed, pipeline green"
 
@@ -63,8 +58,7 @@ AICR ✓ | 代码扫描 ✓ | 单元测试 12/12 ✓"
 
 ✅ "vllm-ascend 增量重编从 15 分钟降到 22 秒（缓存了 third_party 编译产物）"
 
-## When this skill activates
+## 什么时候生效
 
-Always — this is a meta-skill layered on top of all others. Before sending
-any user-visible output, check against the principles and banned patterns
-above.
+永远生效——这是压在所有其他技能之上的元规范。发出任何用户可见内容之前，
+都要按上面的原则与禁止写法过一遍。
