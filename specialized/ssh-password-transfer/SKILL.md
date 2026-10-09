@@ -24,7 +24,7 @@ description: "用用户名密码把文件或目录拷贝到远程 Linux 主机�
 ## 输出范式（所有技能统一）
 
 本 skill 产出的**一切对外内容**（对话回复、PR/MR 描述、评审回复、报错信息、结果汇总）
-必须先按 `common/user-communication` skill 的原则与禁止写法自检后再发出：
+必须先按 `meta/user-communication` skill 的原则与禁止写法自检后再发出：
 用词准确无歧义、先上下文后结论、证据先行；不满足范式的输出不许发出。
 
 ## 必填输入

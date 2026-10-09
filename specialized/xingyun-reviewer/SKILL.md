@@ -1,6 +1,6 @@
 ---
 name: xingyun-reviewer
-description: "行云 MR 来了评审意见后的完整处理循环：拉评论（coding-cli）→ 按 改代码/提问/认可/CI问题/格式/无关 分类 →要改代码的先自测再进容器提交推送 → 按讨论线程逐条回复（给了 ✅已修复 / 💡说明 / 🤔有不同看法 三种回复模板），循环到所有线程关闭。含自测三规则（零残留、功能测试、干净环境）、会话内 30 秒后台轮询的启动脚本、以及别人的 MR 不碰、CI 不是自己引起的先问用户等边界。用户说 处理评审意见 / 回复 reviewer / 盯这个 MR 时使用，需要 MR 编号。"
+description: "行云 MR 来了评审意见后的完整处理循环：拉评论（coding-cli）→ 按 改代码/提问/认可/CI问题/格式/无关 分类 →要改代码的先自测再进容器提交推送（每轮修复压回 1 个合规提交再 force-with-lease——行云钩子逐提交校验，单提交是成本最优推送单位）→ 按讨论线程逐条回复（给了 ✅已修复 / 💡说明 / 🤔有不同看法 三种回复模板），循环到所有线程关闭。含自测三规则（零残留、功能测试、干净环境）、会话内 30 秒后台轮询的启动脚本、以及别人的 MR 不碰、CI 不是自己引起的先问用户等边界。用户说 处理评审意见 / 回复 reviewer / 盯这个 MR 时使用，需要 MR 编号。"
 ---
 
 # xingyun-reviewer（行云 MR 检视意见自动处理）
@@ -25,7 +25,7 @@ description: "行云 MR 来了评审意见后的完整处理循环：拉评论�
 ## 输出范式（所有技能统一）
 
 本 skill 产出的**一切对外内容**（对话回复、PR/MR 描述、评审回复、报错信息、结果汇总）
-必须先按 `common/user-communication` skill 的「原则」与「禁止写法」自检后再发出：
+必须先按 `meta/user-communication` skill 的「原则」与「禁止写法」自检后再发出：
 用词准确无歧义、先上下文后结论、证据先行；不满足范式的输出不许发出。
 
 ## 前置条件
@@ -143,7 +143,7 @@ for n in json.load(sys.stdin):
 - 改动/自测/提交用列表项，不要写成散文。
 - 不要用 `##` 标题（渲染出来字号过大）；用第一行加粗代替。
 
-## 修复 → 自测 → 提交 → 推送（在容器内）
+## 修复 → 自测 → 提交 → 推送（在容器内；即 xingyun-push「生命周期总纲」④ 的容器版）
 
 **不可协商：每个修复在提交之前必须先过自测。** 没有测试就不提交。
 测不了就说明原因并问用户。
@@ -154,18 +154,26 @@ for n in json.load(sys.stdin):
 # 1. 改代码
 # 2. 自测（见下面的清单）——必须通过才能继续
 # 3. 确认测试真的跑了（看退出码、看输出）
-# 4. 提交（只要标题，≥4 词，以句号结尾）
+# 4. 提交本轮修复（WIP 消息随意——马上压掉；见 xingyun-push skill）
 docker exec <container> bash -c 'cd <your-xllm-repo> && \
   git add <files> && \
-  git commit -m "bugfix: describe the fix with four words minimum." && \
+  git commit -m "wip: review fix" && \
   git log --oneline -1'  # MUST verify commit succeeded (hooks can fail silently)
 
-# 4. 按行云钩子要求修尾部换行（见 xingyun-push skill）
-# 5. 推送
+# 5. 压回单提交（推送单位 = 1 个合规提交，理由见 xingyun-push
+#    「提交组织与推送单位」；commit-tree 无换行，钩子陷阱一并绕开；
+#    reset --hard 前确认没有要保留的未提交改动）
+docker exec <container> bash -c 'cd <your-xllm-repo> && \
+  base=$(git merge-base HEAD coding/main) && \
+  tree=$(git rev-parse HEAD^{tree}) && \
+  new=$(printf "%s" "bugfix: describe the fix with four words minimum." | git commit-tree "$tree" -p "$base") && \
+  git reset --hard "$new" && git log --oneline -2'
+
+# 6. 推送（重写了分支历史 → 必须 force-with-lease）
 docker exec <container> bash -c 'cd <your-xllm-repo> && \
   git push coding feat/<branch> --force-with-lease'
 
-# 6. 回复评审人
+# 7. 回复评审人（引用压缩后的新 sha）
 ~/bin/coding-cli mr note <MR> -R xLLM_AI/xllm -m "回复内容"
 ```
 

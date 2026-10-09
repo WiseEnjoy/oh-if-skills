@@ -8,11 +8,17 @@ from real production experience.
 Two-level layout: `skills/<category>/<name>/SKILL.md`. OpenCode discovers
 nested directories recursively, so copy the category folder too.
 
+### meta/ — meta-paradigms (always in effect, not on-demand)
+
+| Name | Description |
+| --- | --- |
+| [user-communication](meta/user-communication/) | **Meta-paradigm, not an optional skill**: every skill's outward output must satisfy it — chat replies, PR/MR bodies, review replies, error messages, summaries |
+| [self-evolution](meta/self-evolution/) | Three iron rules + a stability-period red line governing how every skill is created, used, maintained, and rewritten: no repeated mistakes, generalize instead of patching details, keep skills lean, rewrite instead of endless patching |
+
 ### common/ — shared disciplines (apply to every task)
 
 | Name | Description |
 | --- | --- |
-| [user-communication](common/user-communication/) | **Meta-paradigm, not an optional skill**: every skill's outward output must satisfy it — chat replies, PR/MR bodies, review replies, error messages, summaries |
 | [safe-ops-rules](common/safe-ops-rules/) | Safety checks before destructive operations (rm, kill, revert, re-run) |
 | [long-running-commands](common/long-running-commands/) | Run long tasks (builds, tests, downloads) detached with `setsid`, without timeout kills |
 
@@ -25,13 +31,15 @@ nested directories recursively, so copy the category folder too.
 | [xingyun-push](specialized/xingyun-push/) | Push/rebase/MR workflow for Xingyun (`coding<internal-domain>`) internal repos |
 | [xingyun-reviewer](specialized/xingyun-reviewer/) | Monitor MR review comments, classify them, fix, self-test and reply |
 | [opencode-skills-sync](specialized/opencode-skills-sync/) | Sync skills to this repo: YAML frontmatter validation + sanitization rules |
+| [sync-after-squash-merge](specialized/sync-after-squash-merge/) | Re-sync a local branch after its MR was squash-merged into main (never pull/rebase/replay) |
 
 ## What is a "skill"?
 
 A skill is a directory containing a `SKILL.md` file (plus optional scripts)
 that teaches the agent how to handle a specific task. Skills are loaded
 on-demand when the task matches the skill's trigger conditions — except the
-meta-paradigm `user-communication`, which every skill's output must follow.
+meta-paradigms `user-communication` (governs all output) and `self-evolution`
+(governs all skill authoring and maintenance).
 
 ```
 skills/
@@ -57,14 +65,14 @@ Every skill directory must satisfy all of:
    and be idempotent.
 4. **Output paradigm block** — every skill except `user-communication` carries a
    `## 输出范式（所有技能统一）` block pointing back to
-   `common/user-communication`.
+   `meta/user-communication`.
 
 ## Installation
 
 ```bash
 # clone and copy the categories (or single skills) you need
 git clone https://github.com/WiseEnjoy/oh-if-skills.git
-cp -r oh-if-skills/common oh-if-skills/specialized ~/.config/opencode/skills/
+cp -r oh-if-skills/meta oh-if-skills/common oh-if-skills/specialized ~/.config/opencode/skills/
 # or for project-specific skills:
 cp -r oh-if-skills/common/<skill> <your-repo>/.claude/skills/
 ```
@@ -78,7 +86,7 @@ exits immediately when dependencies are already present.
 2. Add YAML frontmatter with `name` (== directory name) and a quoted
    `description` (determines when the skill activates — list trigger phrases)
 3. Add the dependency section + `install.sh`
-4. Add the output-paradigm block pointing to `common/user-communication`
+4. Add the output-paradigm block pointing to `meta/user-communication`
 5. Write the workflow: what to do, in what order, with what checks
 6. Include real failure cases and how to handle them (not just happy path)
 7. Add self-test rules if the skill modifies code or pushes changes

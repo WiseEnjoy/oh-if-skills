@@ -32,13 +32,14 @@ description: "把本机 ~/.config/opencode/skills 的技能同步到公共 GitHu
 ## 输出范式（所有技能统一）
 
 本 skill 产出的**一切对外内容**（对话回复、PR/MR 描述、评审回复、报错信息、结果汇总）
-必须先按 `common/user-communication` skill 的「原则」与「禁止写法」自检后再发出：
+必须先按 `meta/user-communication` skill 的「原则」与「禁止写法」自检后再发出：
 用词准确无歧义、先上下文后结论、证据先行；不满足范式的输出不许发出。
 
 ## 一、目录结构与技能契约（2026-09-30 起强制）
 
-1. **两级布局**：`skills/<分类>/<技能名>/SKILL.md`。分类只有两个：
-   `common/`（跨任务共性能力：user-communication、safe-ops-rules、long-running-commands）、
+1. **两级布局**：`skills/<分类>/<技能名>/SKILL.md`。分类有三个：
+   `meta/`（元规范：user-communication 输出范式、self-evolution 技能自进化铁律）、
+   `common/`（跨任务共性能力：safe-ops-rules、long-running-commands）、
    `specialized/`（绑定平台或工具：gitcode-github-pr、ssh-password-transfer、xingyun-push、
    xingyun-reviewer、opencode-skills-sync）。嵌套子目录 opencode 会递归发现（`**/SKILL.md`，实测稳定）。
 2. **命名见名知义**：skill `name`、所在目录 basename、正文 h1 标题三者必须一致；
@@ -51,7 +52,7 @@ description: "把本机 ~/.config/opencode/skills 的技能同步到公共 GitHu
    新增/改技能时必须同步补这两处，二者描述的依赖必须一致。
 4. **输出范式契约**：`user-communication` 不是按需技能，是**所有技能输出都必须服从的元规范**。
    除它自己外，每个 SKILL.md 的依赖段之后必须带一块
-   `## 输出范式（所有技能统一）`，指回 `common/user-communication`；
+   `## 输出范式（所有技能统一）`，指回 `meta/user-communication`；
    该技能永远常驻，不按场景取舍。
 
 ## 二、YAML frontmatter 硬性规则（GitHub 报 yaml 语法错误的根因）
