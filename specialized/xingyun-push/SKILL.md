@@ -1,6 +1,6 @@
 ---
 name: xingyun-push
-description: "往行云仓 coding<internal-domain>:xLLM_AI/xllm.git 推代码时的全部规矩，全部来自真实推送失败：提交信息正则（类型限定 + 至少 4 个词 + 以句号结尾 + 只要标题不要正文）、Git 尾部换行导致每个提交必被钩子拒的绕法（用 commit-tree 去掉换行重建）、rebase 到 coding/main 及排障表（fetch 断流、仓库被 shallow、ssh 权限、代理改包）、force-with-lease 推送、子模块指针漂移的两种处置、容器内外 UID 互踩，以及行云 MR 标题与三段式描述模板。触发词：推行云、rebase、提交被钩子拒绝、coding 拉取失败、创建 MR。"
+description: "往行云仓 coding<internal-domain>:xLLM_AI/xllm.git 推代码的完整生命周期范式，每个环节固定命令照抄：黄金规则（本地 main 永远零提交，一切工作在 feat 分支，用完即删）→ 同步主干（fetch+reset 两条命令）→ 推送/建 MR（固定六行：fetch→收口WIP→rebase→压单提交→force-with-lease）→ 评审轮次重压重推 → 合入后删分支。含提交信息正则（类型+≥4词+句号、只要标题）、尾部换行钩子拒的 commit-tree 绕法、rebase 排障表（fetch 断流、shallow、ssh、代理）、子模块处置、UID 互踩、MR 三段式模板。触发词：推行云、rebase、同步主干、更新本地、定时拉主干、提交被钩子拒绝、coding 拉取失败、创建 MR。"
 ---
 
 # 行云推送（xingyun-push）：rebase / 提交 / 推送规范
@@ -24,8 +24,45 @@ description: "往行云仓 coding<internal-domain>:xLLM_AI/xllm.git 推代码时
 ## 输出范式（所有技能统一）
 
 本 skill 产出的**一切对外内容**（对话回复、PR/MR 描述、评审回复、报错信息、结果汇总）
-必须先按 `common/user-communication` skill 的「原则」与「禁止写法」自检后再发出：
+必须先按 `meta/user-communication` skill 的「原则」与「禁止写法」自检后再发出：
 用词准确无歧义、先上下文后结论、证据先行；不满足范式的输出不许发出。
+
+## 生命周期总纲（先读这个；其余章节是它的参考手册）
+
+**黄金规则：本地 `main` 永远零提交**——它只是 `coding/main` 的只读镜像，
+一切工作都在 `feat/<name>` 分支上做，MR 合入后分支用完即删。
+这条规则成立后，squash 合入策略下没有任何环节需要现场推导：
+
+| 环节 | 固定动作（照抄，不要发明） |
+| --- | --- |
+| ① 同步主干（日常 / 合入后 / 定期，无脑跑） | `git checkout main && git fetch coding main && git reset --hard coding/main` |
+| ② 开新特性 | `git checkout -b feat/<name> main` |
+| ③ 开发 | 本地随便 WIP 提交（消息随意，推送前反正会压掉） |
+| ④ 推送 / 建 MR | 固定六行（下面）；MR 标题/正文按「PR/MR 规范」+ coding-cli 章节 |
+| ⑤ 评审轮次 | 改代码 → 自测 → 重复④ → 按线程回复（详见 xingyun-reviewer skill） |
+| ⑥ MR 合入后 | 平台没自动删就删远端分支 → `git branch -D feat/<name>` → 回① |
+
+**④ 的固定六行**（推送单位 = 1 个压好的合规提交，理由见「提交组织与推送单位」。
+不管本地历史被造成什么样，六行永远收敛到同一个结果：1 个基于最新 main 的合规提交）：
+
+```bash
+git fetch coding main
+git add -u && git commit -m "wip" || true   # 先收口才能 rebase（没改动就跳过）
+git rebase coding/main                      # 三方合并，冲突只在这解（单提交最多一轮）
+base=$(git merge-base HEAD coding/main)     # rebase 后 = coding/main 顶端
+new=$(printf '%s' "feat: one two three four." | git commit-tree "$(git rev-parse HEAD^{tree})" -p "$base")
+git reset --hard "$new" && git push --force-with-lease coding feat/<name>
+```
+
+- `git add -u` 只收**已跟踪**文件；未跟踪新文件按需显式 `git add`；
+  子模块 gitlink 漂移要不要进提交逐案判断（见「子模块处理」）。
+- 平台合入用 squash → 主干上每个 PR 只落 1 个提交，**由平台保证**，
+  本地分支怎么组织提交都不影响主干；WIP 消息不必合规（压掉后不进推送载荷），
+  最终消息必须过钩子正则（见下文）。
+- 长周期分支的定期同步 = ④ 的前三行（fetch + 收口 + rebase）；
+  不推送就不用压，下次推送时六行自动收编。
+- 一切"分叉 / patch-id / pull 冲突"的根源都是往本地 main 提交过代码。
+  违反黄金规则后的补救见 sync-after-squash-merge skill——但正道是别违反。
 
 ## 提交身份
 
@@ -90,7 +127,52 @@ full = subprocess.run(['git','log','-1','--format=%B',sha],capture_output=True,t
 assert pat.match(full)
 ```
 
-## rebase 到行云 main
+## 提交组织与推送单位（squash 语义下的行业惯例）
+
+**原则（行业最优实践，squash 主干通用）**：
+
+- **变更单元是 PR，不是提交**：one PR = one logical change。
+- **分支历史是一次性草稿**：平台 squash 合入会把分支上所有提交压成主干上的
+  1 个提交，本地怎么组织提交完全不影响主干。开发期**随便打 WIP 提交**
+  （消息随意）——这正是 squash 模式的核心好处，不用维护分支历史的美观。
+- "每个 PR 在主干上只落 1 个提交"由**平台的合入动作**保证，不需要、也不应该
+  在本地把"单提交分支"当成教条去维护。
+- 分叉/patch-id 问题的正解是黄金规则（本地 main 零提交 + 合入后删分支 +
+  reset 同步，见总纲），与分支上有几个提交**无关**
+  （2026-10-09 事故的根源是往本地 main 提交，不是多提交分支）。
+
+**行云的成本差异（推送单位为什么固定为 1 个压好的提交）**：
+
+- 行云钩子校验**推送载荷里的每一个提交**（正则 + 无换行）：推 N 个提交
+  = N 次 commit-tree 重建；推 1 个 = 一次（即总纲④的六行）。
+- squash 落到主干的消息由平台从分支/PR 生成（实测带 `(#N)` 后缀）——
+  单提交让落库消息完全可控。
+- 评审轮次两种行业做法都合法：每轮 append 修复提交（平台最后压掉）或每轮
+  重压。行云上 append 同样要过钩子重建，所以**每轮重压回 1 个**最省
+  （重复总纲④）；确需让评审人分步看时，推多个合规提交用上节的重建循环，
+  只是更贵。
+
+**压法**（= 总纲④的后三行。前提：工作树干净——改动先全部提交成 WIP；
+未跟踪文件与子模块漂移不受 `reset --hard` 影响，但**要保留的未提交改动会丢**，
+先确认；跑之前用 `git branch --show-current` 确认就在目标分支上）：
+
+```bash
+base=$(git merge-base HEAD coding/main)   # 分支基点；rebase 过即最新 main
+tree=$(git rev-parse HEAD^{tree})         # 当前最终内容
+new=$(printf '%s' "feat: one two three four." | git commit-tree "$tree" -p "$base")
+git reset --hard "$new"                   # 分支上只剩这 1 个提交
+git push --force-with-lease coding <branch>
+```
+
+要点：
+
+- `commit-tree` 直接喂无换行消息——尾部换行陷阱一并绕开（见上节）。
+- 消息必须过钩子正则：`类型: 至少 4 个词.`，只要标题。
+- WIP 提交的消息**不必**合规——压掉后不进推送载荷，钩子看不到。
+- 历史遗留的多提交分支要推送时，同样先压成 1 个再推；上节的多提交
+  commit-tree 重建循环用于"确实要推多个提交"的场景。
+
+## rebase 到行云 main（= 总纲④的第三行；长周期分支定期同步同此）
 
 ```bash
 git fetch coding main
@@ -112,7 +194,7 @@ git rebase coding/main
 git push --force-with-lease coding <branch>
 ```
 
-- `<branch>` 就是工作实际所在的分支（历史会话里是 `zlh_offline_infer` 这种）——
+- `<branch>` 就是工作实际所在的分支——按总纲②统一用 `feat/<name>` 命名；
   用 `git branch --show-current` 和远端真实状态确认，别凭空假设分支名。
 - 任何 rebase 之后的更新都是非快进的 → 必须 `--force-with-lease`
   （安全变体：别人动过这个 ref 就会失败）。
@@ -141,18 +223,25 @@ git push --force-with-lease coding <branch>
 绝不要对 coding 跑 `git fetch --depth=1`（会把仓库弄成 shallow）。
 注意：普通 `git stash` 能收下 gitlink 漂移，`git stash push -- <path>` 收不下。
 
-## 端到端流程（rebase → 提交 → 推送）
+## 端到端流程（生命周期总纲④ 的 stash 变体）
+
+与总纲④等价，差别是用 `git stash` 收口——适合子模块 gitlink 漂移想留在
+工作区、不进 WIP 提交的场景：
 
 ```bash
 git stash push -m "wip"                     # capture worktree changes (incl. gitlink drift)
 git fetch coding main
 git rebase coding/main                      # resolve conflicts if any
 git stash pop
-# ... 构建 + 测试（SKIP_TEST=1 打 wheel），然后提交：
+# ... 构建 + 测试（SKIP_TEST=1 打 wheel），然后提交 WIP（消息随意，推送前会压掉）：
 git add <files>                             # decide case-by-case whether submodule
                                             # pointer updates belong in the commit
-git commit -m "bugfix: <>=4 words description here."   # title-only, ends with period
-# 钩子拒绝时按上面方法重建成无换行，然后：
+git commit -m "wip"
+# 压成单提交（见「提交组织与推送单位」），commit-tree 无换行，钩子陷阱一并绕开：
+base=$(git merge-base HEAD coding/main)
+new=$(printf '%s' "bugfix: <>=4 words description here." | \
+      git commit-tree "$(git rev-parse HEAD^{tree})" -p "$base")
+git reset --hard "$new"
 git push --force-with-lease coding <branch> # the branch the work actually lives on
 ```
 
@@ -174,12 +263,12 @@ git push --force-with-lease coding <branch> # the branch the work actually lives
 
 **正文三段式**（内容用中文，每段带 emoji + 英文关键字，顺序：why → what → verification）：
 
-1. **## 🎯 改动说明**（why）：背景与原因，讲为什么需要这个改动。
-2. **## 🔧 主要改动**（what）：改了什么，用 `-` 列表逐条列出。
-3. **## ✅ 测试覆盖**（verification）：怎么证明改动正确，附真实命令输出。
+1. **## 🎯 为什么修改（why）**：背景与原因，讲为什么需要这个改动。
+2. **## 🔧 改了什么（what）**：改了什么，用 `-` 列表逐条列出。
+3. **## ✅ 怎么验证的（verification）**：怎么证明改动正确，附真实命令输出。
 
 **格式规范**：
-- 三段标题用 `## 🎯 改动说明` / `## 🔧 主要改动` / `## ✅ 测试覆盖`（**h2**，与现有 MR 一致；h1 字号过大，不要用 `#`）
+- 三段标题用 `## 🎯 为什么修改（why）` / `## 🔧 改了什么（what）` / `## ✅ 怎么验证的（verification）`（**h2**；h1 字号过大，不要用 `#`）
 - 改动条目用 `-` 无序列表，每条一句话
 - 测试输出用代码块（\`\`\`包裹），截取关键行
 - 可用 emoji 增强可读性：🔧 改动、✅ 通过、📊 数据、⚠️ 注意
@@ -195,11 +284,11 @@ git push --force-with-lease coding <branch> # the branch the work actually lives
   --source-branch feat/xxx \
   --base main \
   --title "feat: xxx yyy zzz www." \
-  -b "## 🎯 改动说明
+  -b "## 🎯 为什么修改（why）
 ...
-## 🔧 主要改动
+## 🔧 改了什么（what）
 ...
-## ✅ 测试覆盖
+## ✅ 怎么验证的（verification）
 ..." \
   -R xLLM_AI/xllm
 
