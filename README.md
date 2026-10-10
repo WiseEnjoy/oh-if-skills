@@ -31,6 +31,7 @@ nested directories recursively, so copy the category folder too.
 | [xingyun-push](specialized/xingyun-push/) | Push/rebase/MR workflow for Xingyun (`coding<internal-domain>`) internal repos |
 | [xingyun-reviewer](specialized/xingyun-reviewer/) | Monitor MR review comments, classify them, fix, self-test and reply |
 | [opencode-skills-sync](specialized/opencode-skills-sync/) | Sync skills to this repo: YAML frontmatter validation + sanitization rules |
+| [xllm-npu-deps-bundle](specialized/xllm-npu-deps-bundle/) | Build the unified xLLM NPU deps bundle (`xllm-deps-*.run`): compile the operator run packages and wheels declared in the bundled `npu_docker_depends.yaml`, assemble and verify the self-extracting bundle |
 | [sync-after-squash-merge](specialized/sync-after-squash-merge/) | Re-sync a local branch after its MR was squash-merged into main (never pull/rebase/replay) |
 
 ## What is a "skill"?
