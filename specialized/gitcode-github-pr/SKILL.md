@@ -134,6 +134,9 @@ curl -s "https://api.gitcode.com/api/v5/repos/<owner>/<repo>/pulls/<number>/file
   处理：`env -u https_proxy curl -sS -o /dev/null -w '%{http_code}' --resolve github.com:443:140.82.112.3 https://github.com/`
   探活，通了就把该 IP 临时追加到 `/etc/hosts`（`140.82.112.3 github.com`），push 完删掉——
   **用完必须删**，否则 IP 轮换后会踩新的坑；多个 IP 逐个试（140.82.112.x / 113.x / 114.x）。
+  DNS 抖动期 `raw.githubusercontent.com` 直连同样超时——复验不必死磕直连：
+  **fetch 走 origin 的 gh-proxy URL**（环境代理下稳定，且能下载真实对象核对 sha），
+  raw 走 gh-proxy 镜像 `https://gh-proxy.com/https://raw.githubusercontent.com/...`。
 - `api.github.com` 两种通道都通；`gh-proxy.com` 只读下载代理，只能 clone 公开仓，**不能 push**。
 - 环境 `https_proxy` 对 gitcode 正常、对 github push 会 503——GitHub 操作统一 `env -u https_proxy -u http_proxy -u HTTPS_PROXY -u HTTP_PROXY`。
 
@@ -141,6 +144,8 @@ curl -s "https://api.gitcode.com/api/v5/repos/<owner>/<repo>/pulls/<number>/file
 
 - PAT 存 `~/.config/opencode/github-token`（600，与 `gitcode-token` 同规）；缺失时向用户要，**不要**去日志里翻。
 - **绝不**把 token 拼进 remote URL、命令回显、日志、commit、PR 描述；一律用 `-c http.extraHeader`（token 不进 URL、不进 `.git/config`）。
+- 本机 credential helper 已配 GitHub 凭据（用户确认，`git config --global credential.helper` 可查）——
+  push 认证直接交给它即可，**不必手动 extraHeader**；凭据取不到时再回退 extraHeader 方案。
 
 ### clone / push（必须同时绕开 gh-proxy 改写 + 去代理）
 
