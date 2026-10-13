@@ -259,7 +259,7 @@ git push --force-with-lease coding <branch> # the branch the work actually lives
 （`type: 小写描述.`，如 `bugfix: cap launch blocks for kernels.`，与本仓提交信息同风格；不要句首大写）。
 
 **平台差异**：行云 MR 是**同仓库内不同分支**做 PR；gitcode/github 是**跨仓库**（fork → 上游），
-推送直接推到默认分支、不新建分支——那套规则见 gitcode-github-pr skill，别混用。
+同样走 `feat/<name>` 分支、本地 main 零提交（head=`<fork_owner>:feat/<name>`）——那套规则见 gitcode-github-pr skill，别混用。
 
 **正文三段式**（内容用中文，每段带 emoji + 英文关键字，顺序：why → what → verified）：
 
