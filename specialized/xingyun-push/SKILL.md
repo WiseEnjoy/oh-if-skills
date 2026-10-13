@@ -274,13 +274,13 @@ git push --force-with-lease coding <branch> # the branch the work actually lives
 **格式规范**：
 - 三段标题用 `## 🎯 为什么修改（why）` / `## 🔧 改了什么（what）` / `## ✅ 已完成的验证（verified）`（**h2**；h1 字号过大，不要用 `#`）
 - 保留空行与列表版式：压缩字数不许牺牲排版，禁止把内容挤成整段一行式
+- **面向读者的表达**：描述写读者能懂的语言——调用者感知不到的内部细节（参数序、符号签名、字段布局、版本演进过程等）**不进描述与注释**，用一句概括代替（如"调用封装与实现 kernel 配套"）
 - 关联子模块/依赖仓的 PR 链接单独列 `## 🔗 关联子模块 PR` 节
 - 测试输出用代码块（\`\`\`包裹），截取关键行
 - 可用 emoji 增强可读性：🔧 改动、✅ 通过、📊 数据、⚠️ 注意
 
 **描述长度限制（行云硬限制 2000 字）**：超限报错 `描述长度不能超过2000`。
-处理：描述保留完整版式的精炼版（空行/列表不动，只砍冗余文字），**完整细节（日志原文、逐条数据）
-拆成第一条评论**：`~/bin/coding-cli mr note <编号> -m "$(cat body.md)"`。
+处理：**不要为塞进 2000 字压缩句子或版式**——把放不下的整段内容（验证日志、关联 PR 明细等）移到第一条评论（\`~/bin/coding-cli mr note <编号> -m "$(cat body.md)"\`），描述里留一行"详见评论"指引。
 
 **创建纪律**：用户说"起草"= 只要草稿；对稿子的任何修改意见（包括改标题）都**不等于创建授权**；
 必须等用户对最终稿明确说"可以创建/确认提交"才可调用 `mr create`。误创建立即 `mr close` 并说明。
@@ -322,7 +322,7 @@ API 调用时项目 ID 用数字（xllm = 958063），不用 URL 编码的路径
 
 | 谁写的 | 后果 | 修复 |
 | --- | --- | --- |
-| 容器 root 写 `.git/` | 宿主机 `Permission denied`（如 `packed-refs`/`index` 读不了） | 容器内：`chown -R <your-uid>:<your-uid> <your-xllm-repo>/.git` |
+| 容器 root 写 `.git/` | 宿主机 `Permission denied`（如 `packed-refs`/`index` 读不了） | 容器内：`chown -R <your-uid>:<your-uid> <your-home-dir>/xllm/.git` |
 | 宿主机 <your-uid> 写 `.git/` | 容器内 git 仍可用（root 无视权限），但 `git config --global` 读的是 `/root/.gitconfig` 而非共享目录的 | 通常无问题 |
 | 容器 root 写 `~/.ssh/`（容器内 `/root/.ssh`） | `Bad owner or permissions on /root/.ssh/config` → SSH 全挂 | 容器内：`chown -R root:root /root/.ssh && chmod 700 /root/.ssh && chmod 600 /root/.ssh/id_* && chmod 644 /root/.ssh/known_hosts` |
 | 宿主机操作后 `~/.ssh/known_hosts` 不可读 | coding-cli `git ls-remote` 失败 | 宿主机：`chmod 644 ~/.ssh/known_hosts && chmod 700 ~/.ssh` |
@@ -335,4 +335,4 @@ API 调用时项目 ID 用数字（xllm = 958063），不用 URL 编码的路径
 1. **提交、推送、创建 PR 优先在容器内做**（pre-commit 钩子、SSH 密钥、coding-cli 认证都在容器内）
 2. 宿主机 git 操作仅限查看（`git log`/`git diff`/`git status`）
 3. 如果宿主机必须提交，用 `git commit --no-verify`（跳过 pre-commit），提交后必须 `git log --oneline -1` 确认成功（钩子失败是静默的）
-4. 任何一侧操作完 git 后，在容器内跑一次 `chown -R <your-uid>:<your-uid> <your-xllm-repo>/.git` 归权
+4. 任何一侧操作完 git 后，在容器内跑一次 `chown -R <your-uid>:<your-uid> <your-home-dir>/xllm/.git` 归权
