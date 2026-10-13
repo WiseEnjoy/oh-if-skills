@@ -58,8 +58,7 @@ curl -s -X POST "https://api.gitcode.com/api/v5/repos/<owner>/<repo>/pulls" \
 （与行云 MR 一致，推荐 `type: 小写描述.`，如 `bugfix: cap launch blocks for kernels.`；
 不要句首大写）。
 
-> **边界**：本规范只约束 **PR 标题与描述**。**提交信息（commit message）不受此约束**，
-> 继续沿用行云提交规范（`type: xxx.` 格式，见 xingyun-push skill）；两者互不影响。
+> **边界**：本规范约束 **PR 标题与描述、提交信息（commit message）、改动代码中的注释**——gitcode/github 的评审侧同样有 agent，会扒**所有**提交面文本做模式匹配：提交信息、代码注释里多一个无关内部名词，都会催生猜测式检视线程。全部按"专业术语 + 实测数据、挤掉无关细节"执行。
 
 **正文三段式**（与行云仓完全一致：h2 标题 + emoji + `-` 列表 + 代码块贴真实输出）：
 
@@ -135,7 +134,7 @@ curl -s "https://api.gitcode.com/api/v5/repos/<owner>/<repo>/pulls/<number>/file
 ```bash
 TOKEN=$(cat ~/.config/opencode/github-token)
 AUTH=$(printf 'x-access-token:%s' "$TOKEN" | base64 -w0)
-printf '[user]\n\tname = <your-name>\n\temail = <your-email>\n[safe]\n\tdirectory = *\n' > /tmp/oc-gitconfig
+printf '[user]\n\tname = <your-name>\n\temail = longhui.z@foxmail.com\n[safe]\n\tdirectory = *\n' > /tmp/oc-gitconfig
 
 # clone
 env -u https_proxy -u http_proxy GIT_CONFIG_GLOBAL=/tmp/oc-gitconfig \
