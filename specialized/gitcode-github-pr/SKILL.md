@@ -1,6 +1,6 @@
 ---
 name: gitcode-github-pr
-description: "在 gitcode.com 和 github.com 上创建、查询、评论、合并 pull request 的完整流程。包含：token 存放与调用方式（不进 URL、不进日志）、fork 跨仓库 PR 的 head/base 方向规则（直接推默认分支、不新建分支）、推前 ls-remote 校验、GitHub 本机连通实测结论（SSH 不可用，只能去代理直连 HTTPS，含 DNS 解析到坏 IP 的处置）、gh CLI 用法，以及三平台统一的 PR 小写标题 + 三段式正文模板。用户说 发起PR / 建PR / 提PR / 合并请求 / 查看PR 时使用。"
+description: "在 gitcode.com 和 github.com 上创建、查询、评论、合并 pull request 的完整流程。包含：token 存放与调用方式（不进 URL、不进日志）、fork 跨仓库 PR 的 head/base 方向规则（分支风格同行云：本地 main 零提交、一切在 feat/<name> 分支、head=fork:feat/<name>、合入后删分支）、推前 ls-remote 校验、GitHub 本机连通实测结论（SSH 不可用，只能去代理直连 HTTPS，含 DNS 解析到坏 IP 的处置）、gh CLI 用法，以及三平台统一的 PR 小写标题 + 三段式正文模板。用户说 发起PR / 建PR / 提PR / 合并请求 / 查看PR 时使用。"
 ---
 
 # gitcode-github-pr（gitcode / github PR 操作）
@@ -25,12 +25,26 @@ description: "在 gitcode.com 和 github.com 上创建、查询、评论、合�
 必须先按 `meta/user-communication` skill 的「原则」与「禁止写法」自检后再发出：
 用词准确无歧义、先上下文后结论、证据先行；不满足范式的输出不许发出。
 
-## 推送目标（gitcode / github 与行云不同，平台差异硬性规则）
+## 分支风格（与行云 xingyun-push 同构：main 零提交 + feat 分支 + 用完即删）
 
-- **行云（coding<internal-domain>）**：同仓库内不同分支做 PR/MR——推 feature 分支，见 xingyun-push skill。
-- **gitcode / github**：PR 是**跨仓库**（fork → 上游仓库），**不用新建分支，直接推到本仓库默认分支（main）**；
-  PR 的 `head` = fork 的默认分支，`base` = 上游仓库的默认分支。
-- 推送后照常 `git ls-remote` 校验远端 sha 与本地一致。
+- **黄金规则同款**：本地 `main` 永远零提交，只是**上游仓库**默认分支的只读镜像；
+  一切工作在 `feat/<name>` 分支上做，PR 合入后本地与远端分支都用完即删。
+- remote 约定：`origin` = 自己的 fork，`upstream` = 上游仓库（没有就先
+  `git remote add upstream https://<host>/<上游owner>/<repo>.git`）。
+- **平台差异只有 PR 方向一处**：
+  - 行云：同仓库内分支做 MR（见 xingyun-push skill）。
+  - gitcode / github：PR 是**跨仓库**（fork → 上游）——`feat/<name>` 推到 **fork**，
+    PR 的 `head` = `<fork_owner>:feat/<name>`，`base` = 上游默认分支（main）。
+    **fork 的 main 不用维护**，过期没关系，head 永远指向 feat 分支。
+
+| 环节 | 固定动作（照抄，不要发明） |
+| --- | --- |
+| ① 同步主干（日常 / 合入后，无脑跑） | `git checkout main && git fetch upstream main && git reset --hard upstream/main` |
+| ② 开新特性 | `git checkout -b feat/<name> main` |
+| ③ 开发 | 本地随便 WIP 提交；这两个平台**没有**行云式钩子，但提交消息仍用行云格式 `type: 小写描述.`（≥4 词、句号结尾），三平台保持一致 |
+| ④ 推送 | `git push origin feat/<name>`（github 侧带 extraHeader，见下文）→ `git ls-remote` 校验远端 sha 与本地一致 |
+| ⑤ 建 PR | head=`<fork_owner>:feat/<name>`，base=上游 main；方向有歧义必须向用户确认，不猜 |
+| ⑥ PR 合入后 | 删 fork 远端分支（API 或仓库设置自动删）→ `git branch -D feat/<name>` → 回① |
 
 ## GitCode（gitcode.com）— xLLM 仓库主平台
 
@@ -49,7 +63,7 @@ curl -s -X POST "https://api.gitcode.com/api/v5/repos/<owner>/<repo>/pulls" \
   -d "{\"access_token\":\"$TOKEN\",\"title\":\"...\",\"head\":\"<源分支>\",\"base\":\"<目标分支>\",\"body\":\"...\"}"
 ```
 
-- `head`=fork 默认分支（如 `<fork_owner>:main`），`base`=上游默认分支（如 `main`）。跨仓库方向必须先向用户确认，不猜。
+- `head`=fork 上的特性分支（如 `<fork_owner>:feat/<name>`），`base`=上游默认分支（如 `main`）。跨仓库方向必须先向用户确认，不猜。
 - 成功响应含 `number` 与 `html_url`——把 PR URL 报给用户。
 
 ### PR 标题与描述规范（gitcode / github / 行云 三平台统一，团队硬性要求）
@@ -142,9 +156,9 @@ printf '[user]\n\tname = <your-name>\n\temail = <your-email>\n[safe]\n\tdirector
 env -u https_proxy -u http_proxy GIT_CONFIG_GLOBAL=/tmp/oc-gitconfig \
   git clone https://github.com/<owner>/<repo>.git
 
-# push
+# push（feat/<name> 推到 fork，不动 fork 的 main）
 env -u https_proxy -u http_proxy GIT_CONFIG_GLOBAL=/tmp/oc-gitconfig \
-  git -c http.extraHeader="Authorization: Basic $AUTH" push origin HEAD:main
+  git -c http.extraHeader="Authorization: Basic $AUTH" push origin feat/<name>
 
 # API
 env -u https_proxy -u http_proxy curl -sS -H "Authorization: Bearer $TOKEN" \
@@ -166,8 +180,8 @@ env -u https_proxy -u http_proxy curl -sS -H "Authorization: Bearer $TOKEN" \
 
 ```bash
 export PATH="$HOME/.local/bin:$PATH"
-# 跨仓库 PR：直接推 fork 默认分支，不新建分支
-gh pr create --repo <上游 owner>/<repo> --base main --head <fork_owner>:main \
+# 跨仓库 PR：head 用 fork 上的 feat 分支，base 用上游默认分支
+gh pr create --repo <上游 owner>/<repo> --base main --head <fork_owner>:feat/<name> \
   --title "bugfix: 小写英文描述." --body "..."
 gh pr list --repo <owner>/<repo>
 gh pr view <number> --repo <owner>/<repo> --json number,title,state,url
@@ -179,8 +193,9 @@ gh pr merge <number> --repo <owner>/<repo> --merge   # 或 --squash/--rebase
 ## 流程约定
 
 1. 先 `git status` / `git log` 确认要进 PR 的提交，未提交改动先问用户是否包含。
-2. gitcode/github：**直接推到本仓库默认分支（main），不新建分支**（跨仓库 PR，head=fork 默认分支）；
-   行云：推 feature 分支后同仓库建 MR（见 xingyun-push skill）。
+2. 分支风格三平台统一（见「分支风格」节）：一切工作在 `feat/<name>` 分支、本地 main 零提交、合入后删分支；
+   差异只在 PR 方向——行云同仓库分支 MR（见 xingyun-push skill），
+   gitcode/github 跨仓库（head=`<fork_owner>:feat/<name>`，base=上游 main）。
 3. 推送 → `ls-remote` 校验 → 按「PR 标题与描述规范」起草（小写标题 + 行云三段式正文）→ 用户确认 → 建 PR。
 4. head/base 有歧义时（多个 remote、多个仓库同名）必须向用户确认，不猜。
 5. 平台钩子会校验提交信息；向 xingyun（coding<internal-domain>）推代码时遵循 xingyun-push skill。
