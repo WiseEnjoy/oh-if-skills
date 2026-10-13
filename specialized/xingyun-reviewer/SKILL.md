@@ -95,6 +95,7 @@ for n in json.load(sys.stdin):
 2. **结构**：先认领 → 讲做了什么 → 引用提交。
 3. **语气**：尊重、简短、不加废话（"感谢指出，已修复，commit <sha>"）。
 4. **自测结果**：永远贴真实命令输出，不要只写"已通过"。
+5. **不暴露内部细节**：回复只写评审人能感知和验证的内容——调用者感知不到的内部细节（参数序、签名、字段布局、演进原因）**一个字都不写**，用"调用封装与实现 kernel 配套"级别的概括带过。评审方多半也是 agent，只做模式匹配：多写的每个内部名词都可能催生一轮猜测式检视线程（真实教训：注释里一个参数名引出 4 条深审线程 + 3 轮反复）。
 5. **你是这个领域的专家**——评审建议是输入，不是命令：
    - 建议**正确**：采纳，并在回复里 credit 评审人。
    - 建议**错误或次优**：拿证据反驳——基准数据、规范/代码引用、或具体反例。
@@ -155,7 +156,7 @@ for n in json.load(sys.stdin):
 # 2. 自测（见下面的清单）——必须通过才能继续
 # 3. 确认测试真的跑了（看退出码、看输出）
 # 4. 提交本轮修复（WIP 消息随意——马上压掉；见 xingyun-push skill）
-docker exec <container> bash -c 'cd <your-xllm-repo> && \
+docker exec <container> bash -c 'cd <your-home-dir>/xllm && \
   git add <files> && \
   git commit -m "wip: review fix" && \
   git log --oneline -1'  # MUST verify commit succeeded (hooks can fail silently)
@@ -163,14 +164,14 @@ docker exec <container> bash -c 'cd <your-xllm-repo> && \
 # 5. 压回单提交（推送单位 = 1 个合规提交，理由见 xingyun-push
 #    「提交组织与推送单位」；commit-tree 无换行，钩子陷阱一并绕开；
 #    reset --hard 前确认没有要保留的未提交改动）
-docker exec <container> bash -c 'cd <your-xllm-repo> && \
+docker exec <container> bash -c 'cd <your-home-dir>/xllm && \
   base=$(git merge-base HEAD coding/main) && \
   tree=$(git rev-parse HEAD^{tree}) && \
   new=$(printf "%s" "bugfix: describe the fix with four words minimum." | git commit-tree "$tree" -p "$base") && \
   git reset --hard "$new" && git log --oneline -2'
 
 # 6. 推送（重写了分支历史 → 必须 force-with-lease）
-docker exec <container> bash -c 'cd <your-xllm-repo> && \
+docker exec <container> bash -c 'cd <your-home-dir>/xllm && \
   git push coding feat/<branch> --force-with-lease'
 
 # 7. 回复评审人（引用压缩后的新 sha）
