@@ -86,6 +86,8 @@ curl -s -X POST "https://api.gitcode.com/api/v5/repos/<owner>/<repo>/pulls" \
 
 ### 查询 / 评论 / 合并
 
+> **回复评论同样执行专业化规范**：专业术语 + 实测数据，挤掉无关细节；调用者感知不到的内部机制一个名词都不写——对方 agent 会扒 PR 全部文本，回复里的多余名词就是下一轮猜测线程的素材。
+
 ```bash
 # 列出 open PR
 curl -s "https://api.gitcode.com/api/v5/repos/<owner>/<repo>/pulls?state=open&access_token=$TOKEN"
@@ -134,7 +136,7 @@ curl -s "https://api.gitcode.com/api/v5/repos/<owner>/<repo>/pulls/<number>/file
 ```bash
 TOKEN=$(cat ~/.config/opencode/github-token)
 AUTH=$(printf 'x-access-token:%s' "$TOKEN" | base64 -w0)
-printf '[user]\n\tname = <your-name>\n\temail = longhui.z@foxmail.com\n[safe]\n\tdirectory = *\n' > /tmp/oc-gitconfig
+printf '[user]\n\tname = <your-name>\n\temail = <your-email>\n[safe]\n\tdirectory = *\n' > /tmp/oc-gitconfig
 
 # clone
 env -u https_proxy -u http_proxy GIT_CONFIG_GLOBAL=/tmp/oc-gitconfig \
