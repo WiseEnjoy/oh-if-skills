@@ -144,8 +144,8 @@ curl -s "https://api.gitcode.com/api/v5/repos/<owner>/<repo>/pulls/<number>/file
 
 - PAT 存 `~/.config/opencode/github-token`（600，与 `gitcode-token` 同规）；缺失时向用户要，**不要**去日志里翻。
 - **绝不**把 token 拼进 remote URL、命令回显、日志、commit、PR 描述；一律用 `-c http.extraHeader`（token 不进 URL、不进 `.git/config`）。
-- 本机 credential helper 已配 GitHub 凭据（用户确认，`git config --global credential.helper` 可查）——
-  push 认证直接交给它即可，**不必手动 extraHeader**；凭据取不到时再回退 extraHeader 方案。
+- 本机 credential helper（VS Code remote-containers）注册在 `~/.gitconfig`——**交互式终端**里 `git push` 可直接用；
+  **非交互 shell**（opencode 等）下取不到凭据（实测报 `could not read Username`），此时用 token 文件 + extraHeader。
 
 ### clone / push（必须同时绕开 gh-proxy 改写 + 去代理）
 
