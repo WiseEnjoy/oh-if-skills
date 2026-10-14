@@ -82,6 +82,39 @@ grep -inE "error|failed" /tmp/opencode/<task>.log | head           # 到目前�
 轮询调用里用 `sleep <N>` 时，工具的 `timeout` 参数要给得比 sleep 略大
 （例如 sleep 240，timeout 给 280000 ms）。
 
+盯守纪律：用户在等的任务，轮询间隔 ≤5 分钟、单次 sleep ≤10 分钟；
+挂 25 分钟静默休眠等于无响应。长周期盯守用多次短调用，不用一次长阻塞。
+
+## 启动前核实真实算力（构建并发不许信 nproc）
+
+`nproc` 会尊重 `OMP_NUM_THREADS` 并报出缩水值——Ascend 环境常预置
+`OMP_NUM_THREADS=12`，在 256 核机器上照样报 12。构建并发据此设置会浪费
+一两个数量级算力（真实事故：默认 -j6 跑了三小时，--jobs 64 后 40 分钟
+收工）。启动编译/测试前先取真实核数：
+
+```bash
+python3 -c "import os; print(len(os.sched_getaffinity(0)))"  # 真实可用核
+grep -c ^processor /proc/cpuinfo                              # 无 python 时兜底
+```
+
+并发按真实核数给满；高并发（≥32）时 `export OMP_NUM_THREADS=1`，
+防止 N 个编译进程各开 N×线程。
+
+## 任务被质疑慢时的排查顺序
+
+用户说"不可能这么慢"时，第一动作是查**利用率的分母**，不是先证明
+"它在正常跑"：
+
+```bash
+ps -e -o pcpu,comm | awk '$1>50' | wc -l   # 满载进程数（对照并发数）
+uptime                                     # load 对照真实核数
+```
+
+满载进程数 < 并发数、或 load 远低于真实核数 → 先查并发被谁压低了
+（nproc 假象 / cgroup / 绑核 / -j 参数）。**"进程 99% CPU 且进度在走"
+不等于"速度正常"**：6 个进程打满 6 个错认的核，与 64 个进程打满 256 核，
+差一个数量级。
+
 ## 启动后超时或可疑时
 
 **不要盲目重跑**。先用 `ps` 确认任务是否还活着——脱离的任务可能活下来了，
