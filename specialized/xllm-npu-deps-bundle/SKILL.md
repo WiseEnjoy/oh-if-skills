@@ -77,7 +77,12 @@ private-address and host-path leak scans on the generated text.
   expected to provide python build deps
 - artifacts are reused across runs unless `--force`; moving refs print a
   commit-mismatch warning -- use `--force` when freshness matters
-- `--only NAME` builds one component (skips assembly); `--jobs N` caps
-  compile parallelism (default nproc/2)
+- `--only NAME` builds one component (skips assembly); `--jobs N` sets
+  compile parallelism. The default is sched_getaffinity cores / 2 -- never
+  derived from nproc, which honors OMP_NUM_THREADS and can report a shrunken
+  count on Ascend envs (observed: default -j6 on a 256-core host, kernel
+  phase 10x slower than --jobs 64). On a big build host pass --jobs
+  explicitly (e.g. --jobs 64) and export OMP_NUM_THREADS=1 so N compile
+  processes do not each fork N*threads of OpenMP workers
 - `supported_socs` in the depends config controls which SoC builds include a
   component for; adding a new SoC only extends that list

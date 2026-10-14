@@ -79,7 +79,17 @@ DEPS="${DEPS:-$SKILL_DIR/npu_docker_depends.yaml}"
 if [[ ! -f "$DEPS" ]]; then die "depends config not found: $DEPS (use --deps)"; fi
 WORK="${WORK:-$HOME/xllm-deps-work}"
 WORK="$(realpath -m "$WORK")"   # absolute: build subshells cd into source dirs
-JOBS="${JOBS:-$(( $(nproc 2>/dev/null || echo 8) / 2 ))}"
+# Real usable cores, NOT nproc: nproc honors OMP_NUM_THREADS and reports a
+# shrunken count on Ascend envs that preset OMP_NUM_THREADS (observed:
+# default -j6 on a 256-core host, kernel phase crawling for hours).
+# sched_getaffinity reflects cpuset/cgroup limits; /proc/cpuinfo is the
+# python3-less fallback (may overcount inside containers, hence second).
+real_cores() {
+  python3 -c "import os; print(len(os.sched_getaffinity(0)))" 2>/dev/null \
+    || grep -c ^processor /proc/cpuinfo 2>/dev/null \
+    || nproc 2>/dev/null || echo 8
+}
+JOBS="${JOBS:-$(( $(real_cores) / 2 ))}"
 (( JOBS > 64 )) && JOBS=64
 (( JOBS < 1 )) && JOBS=1
 ARCH="$(uname -m)"
