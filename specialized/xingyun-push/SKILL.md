@@ -39,7 +39,7 @@ description: "往行云仓 coding<internal-domain>:xLLM_AI/xllm.git 推代码的
 | ② 开新特性 | `git checkout -b feat/<name> main` |
 | ③ 开发 | 本地随便 WIP 提交（消息随意，推送前反正会压掉） |
 | ④ 推送 / 建 MR | 固定六行（下面）；MR 标题/正文按「PR/MR 规范」+ coding-cli 章节 |
-| ⑤ 评审轮次 | 改代码 → 自测 → 重复④ → 按线程回复（详见 xingyun-reviewer skill） |
+| ⑤ 评审轮次 | 改代码 → 自测 → 重复④ → 合并回复（详见 xingyun-reviewer skill） |
 | ⑥ MR 合入后 | 平台没自动删就删远端分支 → `git branch -D feat/<name>` → 回① |
 
 **④ 的固定六行**（推送单位 = 1 个压好的合规提交，理由见「提交组织与推送单位」。
