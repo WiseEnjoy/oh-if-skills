@@ -21,6 +21,7 @@ nested directories recursively, so copy the category folder too.
 | --- | --- |
 | [safe-ops-rules](common/safe-ops-rules/) | Safety checks before destructive operations (rm, kill, revert, re-run) |
 | [long-running-commands](common/long-running-commands/) | Run long tasks (builds, tests, downloads) detached with `setsid`, without timeout kills |
+| [xllm-build](common/xllm-build/) | Build xLLM safely in the real repository, handling busy binaries, intentional submodule drift, detached builds, and state restoration |
 
 ### specialized/ — platform-specific workflows
 
