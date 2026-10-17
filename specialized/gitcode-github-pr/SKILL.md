@@ -34,7 +34,7 @@ description: "gitcode.com 与 github.com 的 PR 操作：token 存放与调用�
 
 ## GitCode（gitcode.com）— xLLM 仓库主平台
 
-- Token：读 `~/.config/opencode/gitcode-token`（600 权限）。**绝不**把 token 打进日志、提交、PR 描述或回显给用户；命令里引用文件即可。
+- Token：读本机私有文件（600 权限），路径用 `TOKEN_FILE` 指向实际位置（历史位置 `~/.config/<agent>/gitcode-token`）；缺失时向用户要。**绝不**把 token 打进日志、提交、PR 描述或回显给用户；命令里引用文件即可。
 - API base：`https://api.gitcode.com/api/v5`（Gitee v5 兼容）。机器环境自带 `https_proxy`，curl 直接可用。
 - owner/repo 从 remote URL 解析：`git remote get-url <name>`，去掉 `git@` / `https://` 前缀与 `.git` 后缀。
 - 发 PR 前先确认已推送且远端与本地一致：
@@ -43,7 +43,7 @@ description: "gitcode.com 与 github.com 的 PR 操作：token 存放与调用�
 ### 创建 PR
 
 ```bash
-TOKEN=$(cat ~/.config/opencode/gitcode-token)
+TOKEN=$(cat "$TOKEN_FILE")
 curl -s -X POST "https://api.gitcode.com/api/v5/repos/<owner>/<repo>/pulls" \
   -H "Content-Type: application/json" \
   -d "{\"access_token\":\"$TOKEN\",\"title\":\"...\",\"head\":\"<源分支>\",\"base\":\"<目标分支>\",\"body\":\"...\"}"
@@ -101,7 +101,7 @@ curl -s "https://api.gitcode.com/api/v5/repos/<owner>/<repo>/pulls/<number>/file
 
 ### Token 与认证
 
-- PAT 存 `~/.config/opencode/github-token`（600，与 `gitcode-token` 同规）；缺失时向用户要，**不要**去日志里翻。
+- PAT 同样存本机私有文件（600），用 `TOKEN_FILE` 指向；缺失时向用户要，**不要**去日志里翻。
 - **绝不**把 token 拼进 remote URL、命令回显、日志、commit、PR 描述；一律用 `-c http.extraHeader`（token 不进 URL、不进 `.git/config`）。
 - 本机 credential helper（VS Code remote-containers）注册在 `~/.gitconfig`——**交互式终端**里 `git push` 可直接用；
   **非交互 shell**（opencode 等）下取不到凭据（实测报 `could not read Username`），此时用 token 文件 + extraHeader。
@@ -112,7 +112,7 @@ curl -s "https://api.gitcode.com/api/v5/repos/<owner>/<repo>/pulls/<number>/file
 所以用临时 global config 整体替换掉全局配置：
 
 ```bash
-TOKEN=$(cat ~/.config/opencode/github-token)
+TOKEN=$(cat "$TOKEN_FILE")
 AUTH=$(printf 'x-access-token:%s' "$TOKEN" | base64 -w0)
 printf '[user]\n\tname = <your-name>\n\temail = <your-email>\n[safe]\n\tdirectory = *\n' > /tmp/oc-gitconfig
 
@@ -138,7 +138,7 @@ env -u https_proxy -u http_proxy curl -sS -H "Authorization: Bearer $TOKEN" \
 - 已装在 `~/.local/bin/gh`（aarch64）。先 `export PATH="$HOME/.local/bin:$PATH"`；若不存在，
   从 `https://github.com/cli/cli/releases` 下载 `gh_<ver>_linux_<arch>.tar.gz`，
   取出 `bin/gh` 放入 `~/.local/bin`（下载慢/被截断时用 `curl --retry -C -` 断点续传）。
-- **当前未 `gh auth login`**，认证直接给环境变量：`GH_TOKEN=$(cat ~/.config/opencode/github-token) gh ...`；
+- **当前未 `gh auth login`**，认证直接给环境变量：`GH_TOKEN=$(cat "$TOKEN_FILE") gh ...`；
   gh 自身也要 `env -u https_proxy` 才能连上。
 - 常用：
 

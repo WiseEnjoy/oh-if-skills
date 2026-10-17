@@ -237,14 +237,23 @@ coding-cli mr note <MR> -R xLLM_AI/xllm -m "回复内容"
 | xllm/**/*.cpp | 编译 + 跑相关单元测试 |
 | tests/** | 跑具体的那个测试文件 |
 
-## 监控（实际怎么跑起来的）
+## 监控（会话内轮询）
 
-**会话内后台轮询**：opencode 会话活着时，一个后台脚本每 30 秒拉一次 MR 讨论，
-把新评论写进 `/tmp/watch-mr<N>.log`。**每收到一条用户消息**（任何消息，
-不只 PR 相关的）都先看这个日志——发现新评论就立刻处理
-（分类 → 修复 → 自测 → 推送 → 回复）。
+会话存续期间用一个脱离进程组的后台轮询（写法见 `common/long-running-commands`），
+每 30-60 秒拉一次 discussions，把新评论追加到日志；**每收到一条用户消息先看一次该日志**，
+有新评论立刻走"分类 → 修复 → 自测 → 推送 → 回复"。
 
 ```bash
+mkdir -p /tmp/agent
+coding-cli api projects/958063/merge_requests/<MR>/discussions -o json > /tmp/agent/mr<MR>.json
+```
+
+把上面这条放进轮询循环即可；**不要**在 shell 里嵌套多层引号手写 JSON 解析脚本
+（实测嵌套 `"` 极易把循环写坏）——先落盘 JSON，再用独立的 python 文件解析。
+
+**局限**：宿主会话结束轮询即停，会话之间需用户手动触发一次检查。
+要 7×24 自动化得靠平台 webhook，不在本 skill 范围内。
+
 # 启动监控（在一次 PR 处理会话的开头跑一次）
 echo '#!/bin/bash
 MR=<N>

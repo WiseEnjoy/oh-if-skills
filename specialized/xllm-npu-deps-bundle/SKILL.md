@@ -34,7 +34,7 @@ environment or CLI at run time.
 ## Quick start
 
 ```bash
-bash ~/.config/opencode/skills/specialized/xllm-npu-deps-bundle/scripts/build_deps_bundle.sh --soc ascend910_93
+bash <本skill目录>/scripts/build_deps_bundle.sh --soc ascend910_93
 ```
 
 One bundle per --soc (CANN soc_version), e.g. ascend910_93.
