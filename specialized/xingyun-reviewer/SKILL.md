@@ -202,40 +202,11 @@ coding-cli mr note <MR> -R xLLM_AI/xllm -m "回复内容"
 提交后**必须**检查 `git log --oneline -1`。钩子坏了就退回
 `git commit --no-verify`。
 
-## 自测规则（通用，来自真实失败）
+## 自测
 
-
-### 规则 1：零残留
-
-改名/删除任何符号（变量、函数、配置键）之后，在整个作用域里 grep 旧名，
-确认 0 命中。同一份逻辑如果存在于多处（别名、重复代码块），
-必须**一次改完所有出现的地方**——绝不假设只有一处。
-
-### 规则 2：功能测试（不只语法）
-
-`bash -n` / `py_compile` 只能证明"能解析"，不能证明"正确"。
-推送前要真的把命令跑一遍，覆盖：
-
-- **正常路径**：正常调用产生预期输出
-- **边界情况**：缺参数（应该打印用法，而不是 `unbound variable`）、
-  空/未设置的环境变量、边界值
-- **反向测试**：原来的坏行为不再出现
-
-### 规则 3：干净环境测试
-
-在空的工作目录里测，不要在有陈旧状态的目录里测。
-已有的 checkout、缓存产物、残留目录会掩盖坏逻辑。
-用 `rm -rf /tmp/test-<name>` + 全新调用。
-
-### 各类文件的最低自测要求
-
-| 改动的文件 | 自测 |
-| --- | --- |
-| scripts/*.py | py_compile + 功能跑通（规则 1-3） |
-| scripts/*.sh | bash -n + 真实执行（规则 1-3） |
-| depends.yaml | yaml.safe_load + 受影响的 verify 命令 |
-| xllm/**/*.cpp | 编译 + 跑相关单元测试 |
-| tests/** | 跑具体的那个测试文件 |
+自测纪律（零残留 / 功能测试 / 干净环境 + 各类文件的最低自测要求）是跨任务通用规则，
+见 `common/safe-ops-rules`「规则 4」。**行云的附加约束**：没有通过自测的修复不许提交，
+测不了就说明原因并问用户。
 
 ## 监控（会话内轮询）
 
@@ -253,34 +224,6 @@ coding-cli api projects/958063/merge_requests/<MR>/discussions -o json > /tmp/ag
 
 **局限**：宿主会话结束轮询即停，会话之间需用户手动触发一次检查。
 要 7×24 自动化得靠平台 webhook，不在本 skill 范围内。
-
-# 启动监控（在一次 PR 处理会话的开头跑一次）
-echo '#!/bin/bash
-MR=<N>
-LAST_TS="<last-processed-timestamp>"
-while true; do
-  coding-cli api projects/958063/merge_requests/$MR/discussions 2>/dev/null | python3 -c "
-import json,sys
-d=json.load(sys.stdin)
-for thread in d:
-    for note in thread.get(\"notes\",[]):
-        if not note.get(\"system\") and note[\"author\"][\"username\"] != \"<your-username>\" and note[\"created_at\"] > \"$LAST_TS\":
-            print(f\"NEW [{note[\"created_at\"][:16]}] {note[\"author\"][\"username\"]} (thread={thread[\"id\"]}):\")
-            print(f\"  {note[\"body\"][:400]}\")
-            print()
-" 2>/dev/null
-  LAST_TS=$(date -u +%Y-%m-%dT%H:%M)
-  sleep 30
-done' > /tmp/watch-mr<N>.sh
-chmod +x /tmp/watch-mr<N>.sh
-setsid /tmp/watch-mr<N>.sh >> /tmp/watch-mr<N>.log 2>&1 &
-```
-
-**之后每条用户消息**：`cat /tmp/watch-mr<N>.log` → 处理所有**新**评论 →
-处理完清空日志。
-
-**局限**：宿主会话一结束轮询就死了。会话之间仍需用户手动触发一次检查。
-要真正的 7×24 自动化，需要 coding<internal-domain> 的 webhook → 通知通道（在 opencode 之外）。
 
 ## 边界情况
 
