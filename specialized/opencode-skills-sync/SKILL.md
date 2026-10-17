@@ -1,6 +1,6 @@
 ---
 name: opencode-skills-sync
-description: "把本机 ~/.config/opencode/skills 的技能同步到公共 GitHub 仓 WiseEnjoy/oh-if-skills。包含：SKILL.md 改完必跑的 YAML 校验脚本（description 必须整体加双引号，否则 GitHub 报 mapping values are not allowed here）、技能目录结构与契约（name 等于目录名、依赖段 + install.sh、输出范式块）、逐条脱敏对照表（内网域名、内网 IP、真实用户名、UID、真实路径）、clone/push 的正确命令、发布后 grep 扫描与故障速查。触发词：同步技能、推 skills、SKILL.md 报 yaml 语法错误、修 frontmatter。"
+description: "维护并发布本技能仓：软链接安装模型（三个 agent 的技能目录直接链到仓库克隆，改仓库即生效，不存在本地版与公共版两份）、技能目录契约（name 等于目录名、依赖段 + install.sh、输出范式块、单一权威来源）、YAML frontmatter 硬规则与校验脚本（description 必须整体加双引号，否则 GitHub 报 mapping values are not allowed here）、发布前脱敏扫描与故障速查。触发词：同步技能、推 skills、SKILL.md 报 yaml 语法错误、修 frontmatter、新增技能。"
 ---
 
 # opencode-skills-sync（opencode 全局技能同步 + YAML frontmatter 校验）
@@ -14,10 +14,7 @@ description: "把本机 ~/.config/opencode/skills 的技能同步到公共 GitHu
 | `git` | `command -v git` | 环境预装，install.sh 自检 |
 | `curl` | `command -v curl` | 环境预装，install.sh 自检 |
 
-**首次使用**：加载本 skill 后、执行任何命令前，先跑一次
-`bash <本skill目录>/install.sh`（幂等，依赖齐全立即退出 0）。
-仍有缺失时脚本会逐项列出，按提示手动安装后再继续。
-`<本skill目录>` = skill 工具输出里的 `Base directory for this skill`。
+**首次使用**：先跑 `bash <本skill目录>/install.sh`（幂等；`<本skill目录>` = skill 工具输出里的 `Base directory for this skill`）。
 
 
 两侧不是同一份内容，**默认不同步，只在用户要求时同步**，且永远逐文件对比后单向发布：
@@ -31,29 +28,23 @@ description: "把本机 ~/.config/opencode/skills 的技能同步到公共 GitHu
 
 ## 输出范式（所有技能统一）
 
-本 skill 产出的**一切对外内容**（对话回复、PR/MR 描述、评审回复、报错信息、结果汇总）
-必须先按 `meta/user-communication` skill 的「原则」与「禁止写法」自检后再发出：
-用词准确无歧义、先上下文后结论、证据先行；不满足范式的输出不许发出。
+本 skill 的一切对外输出，发出前按 `meta/user-communication` 的原则与禁止写法自检。
 
-## 一、目录结构与技能契约（2026-09-30 起强制）
+## 一、目录结构与技能契约
 
-1. **两级布局**：`skills/<分类>/<技能名>/SKILL.md`。分类有三个：
-   `meta/`（元规范：user-communication 输出范式、self-evolution 技能自进化铁律）、
-   `common/`（跨任务共性能力：safe-ops-rules、long-running-commands）、
-   `specialized/`（绑定平台或工具：gitcode-github-pr、ssh-password-transfer、xingyun-push、
-   xingyun-reviewer、opencode-skills-sync）。嵌套子目录 opencode 会递归发现（`**/SKILL.md`，实测稳定）。
-2. **命名见名知义**：skill `name`、所在目录 basename、正文 h1 标题三者必须一致；
+1. **两级布局**：`<分类>/<技能名>/SKILL.md`。三个分类：`meta/`（元规范，常驻生效）、
+   `common/`（跨任务共性能力）、`specialized/`（绑定平台或工具）。
+   嵌套子目录 opencode 会递归发现（`**/SKILL.md`，实测稳定）。
+   分类归属判据：**被两个以上技能引用的规则放 common，只在一个平台成立的放 specialized。**
+2. **命名见名知义**：skill `name`、目录 basename、正文 h1 三者必须一致；
    `name` 只能 `[a-z0-9-]` 且 ≤64 字符，`description` ≤1024 字符（中文 allowed）。
-   含糊的旧名要改（`scp-transfer`→`ssh-password-transfer`、`git-pr`→`gitcode-github-pr`、
-   `global-skills-sync`→`opencode-skills-sync`、`xllm-pr-autofix`→`xingyun-reviewer`）。
-3. **依赖契约**：每个技能目录必须带幂等的 `install.sh`，且 SKILL.md 标题后紧跟
-   `## 依赖（首次使用自动安装）` 段——三列 Markdown 表（依赖 / 检查 / 缺失时）+ 一段说明
-   「首用先跑 `bash <本skill目录>/install.sh`」。无依赖的技能也保留该段，写明"无外部依赖"。
-   新增/改技能时必须同步补这两处，二者描述的依赖必须一致。
-4. **输出范式契约**：`user-communication` 不是按需技能，是**所有技能输出都必须服从的元规范**。
-   除它自己外，每个 SKILL.md 的依赖段之后必须带一块
-   `## 输出范式（所有技能统一）`，指回 `meta/user-communication`；
-   该技能永远常驻，不按场景取舍。
+3. **依赖契约**：每个技能目录带幂等 `install.sh`，SKILL.md 标题后紧跟
+   `## 依赖（首次使用自动安装）` 段（三列表格 + 一行"首次使用先跑 install.sh"）。
+   无依赖的技能也保留该段，写明"无外部依赖"。两处描述的依赖必须一致。
+4. **输出范式契约**：除 `user-communication` 自己外，每个 SKILL.md 的依赖段之后带一块
+   `## 输出范式（所有技能统一）`，一行回指 `meta/user-communication`。
+5. **单一权威来源**：同一条规则只能有一个落点，其他技能只能引用（如分支与 PR 规范统一在
+   `common/pr-mr-workflow`）。发现两处写同一规则时，合并到一处再加引用，不许并存。
 
 ## 二、YAML frontmatter 硬性规则（GitHub 报 yaml 语法错误的根因）
 
@@ -112,16 +103,22 @@ done
 
 ## 四、同步流程
 
-1. 校验本地：跑上面的校验脚本，8 个技能全 OK（`opencode debug skill` 应列出 8 个本地技能）。
-2. clone（或复用）公共仓，走 gitcode-github-pr skill 的 GitHub 连通性规则（**去代理直连 + 临时 GIT_CONFIG_GLOBAL**）。
-3. `diff <公共仓>/<分类>/<name>/SKILL.md <本地>/<分类>/<name>/SKILL.md`，逐个审阅差异（**目录结构必须先镜像成本地的两级布局**，重命名的技能按新名落位，不保留旧目录）：
-   - 只有 frontmatter 引号差异 → 直接修公共仓的 frontmatter；
-   - 正文有更新 → 把本地正文搬过去**并套脱敏表**，再 diff 复查有没有漏的内网信息。
-4. 在**公共仓**里跑同一套 YAML 校验（脚本里的 `cd` 换成仓库目录），全绿再提交。
-5. 提交信息用 `type: 小写描述.` 风格，如 `fix: quote yaml frontmatter descriptions to fix github syntax errors`。
-6. push（命令见 gitcode-github-pr skill「clone / push」一节），push 后 `git fetch` 复核远端 sha。
-7. 收尾复验：拉 raw URL 再跑一次 YAML 校验——
-   `env -u https_proxy curl -sS https://raw.githubusercontent.com/WiseEnjoy/oh-if-skills/main/<分类>/<name>/SKILL.md`。
+**当前安装模型（2026-10-17 起）**：本机三个 agent 的技能目录都是**软链接**，直接指向本仓库克隆
+（`~/.joycode/skills/<name>`、`~/.claude/skills/<name>` 为逐技能软链接；
+`~/.config/opencode/skills/<分类>` 为分类软链接）。所以：
+
+- 编辑技能 = 直接改仓库工作区文件，三个 agent 下一轮即生效，**不存在"本地版 vs 公共仓版"两份内容**。
+- 发布 = 在本仓库提交并 push，不再需要逐文件 diff 搬运。
+- **脱敏仍然强制**：新写入的内容里凡是内网域名、内网 IP、真实用户名/姓名/邮箱、UID、
+  真实家目录路径，一律按第三节替换成占位符；提交前跑一次扫描，0 命中才能 push。
+
+流程：
+
+1. 改完跑第二节的 YAML 校验脚本，全部技能 OK。
+2. 跑脱敏扫描（照 `~/.config/opencode/leak-scan.txt` 的字面量清单 grep），0 命中。
+3. 提交信息用 `type: 小写描述.`（≥4 词、句号结尾）。
+4. push 按 `gitcode-github-pr` skill 的 GitHub 规则（**去代理直连 + 临时 GIT_CONFIG_GLOBAL + extraHeader**）。
+5. push 后 `git fetch` 复核远端 sha 等于本地。
 
 ## 五、常见故障速查
 

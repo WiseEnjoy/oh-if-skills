@@ -5,6 +5,8 @@ TAG="xllm-build"
 MISSING=()
 log() { printf '[%s] %s\n' "$TAG" "$*"; }
 have() { command -v "$1" >/dev/null 2>&1; }
+# timeout 只在 GNU coreutils 上有（macOS 没有）：有就用，没有就直接跑
+run_to() { if have timeout; then timeout 300 "$@"; else "$@"; fi; }
 pkg_mgr() {
   if have dnf; then echo dnf
   elif have apt-get; then echo apt-get
@@ -18,23 +20,23 @@ install_pkg() {
   have "$cmd" && return 0
   mgr=$(pkg_mgr)
   if [ -z "$mgr" ]; then
-    log "缺 $cmd：机器上没有包管理器，请手动安装 $pkg"
+    log "缺 ${cmd}：机器上没有包管理器，请手动安装 ${pkg}"
     return 1
   fi
   log "安装 $pkg ..."
   case "$mgr" in
-    dnf|yum) timeout 300 "$mgr" install -y "$pkg" >/dev/null 2>&1 ;;
+    dnf|yum) run_to "$mgr" install -y "$pkg" >/dev/null 2>&1 ;;
     apt-get)
-      timeout 300 apt-get update -qq >/dev/null 2>&1
-      timeout 300 apt-get install -y -qq "$pkg" >/dev/null 2>&1
+      run_to apt-get update -qq >/dev/null 2>&1
+      run_to apt-get install -y -qq "$pkg" >/dev/null 2>&1
       ;;
-    apk) timeout 300 apk add --no-cache "$pkg" >/dev/null 2>&1 ;;
+    apk) run_to apk add --no-cache "$pkg" >/dev/null 2>&1 ;;
   esac
   if have "$cmd"; then
     log "已安装 $pkg"
     return 0
   fi
-  log "安装失败 $pkg（请手动执行：$mgr install $pkg）"
+  log "安装失败 ${pkg}（请手动执行：${mgr} install ${pkg}）"
   return 1
 }
 

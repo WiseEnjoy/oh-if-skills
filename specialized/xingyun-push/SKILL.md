@@ -1,6 +1,6 @@
 ---
 name: xingyun-push
-description: "往行云仓 coding<internal-domain>:xLLM_AI/xllm.git 推代码的完整生命周期范式，每个环节固定命令照抄：黄金规则（本地 main 永远零提交，一切工作在 feat 分支，用完即删）→ 同步主干（fetch+reset 两条命令）→ 推送/建 MR（固定六行：fetch→收口WIP→rebase→压单提交→force-with-lease）→ 评审轮次重压重推 → 合入后删分支。含提交信息正则（类型+≥4词+句号、只要标题）、尾部换行钩子拒的 commit-tree 绕法、rebase 排障表（fetch 断流、shallow、ssh、代理）、子模块处置、UID 互踩、MR 三段式模板。触发词：推行云、rebase、同步主干、更新本地、定时拉主干、提交被钩子拒绝、coding 拉取失败、创建 MR。"
+description: "行云仓推代码的平台特有规则：提交信息钩子正则（fix: 会被拒，必须 bugfix:；≥4 词 + 句号；只要标题不要正文）、尾部换行陷阱与 commit-tree 绕法、coding 链路 fetch/rebase 排障表、子模块 gitlink 逐案处置、coding-cli 调用方式（command -v 判定，别硬编码路径）与容器/宿主机 UID 互踩。分支生命周期与 PR 正文规范见 common/pr-mr-workflow。触发词：推行云、rebase、同步主干、提交被钩子拒绝、创建 MR。"
 ---
 
 # 行云推送（xingyun-push）：rebase / 提交 / 推送规范
@@ -11,58 +11,25 @@ description: "往行云仓 coding<internal-domain>:xLLM_AI/xllm.git 推代码的
 | --- | --- | --- |
 | `git` | `command -v git` | 环境预装，install.sh 自检 |
 | `python3` | `command -v python3` | 环境预装，install.sh 自检 |
-| `coding-cli` | `command -v coding-cli` | 缺失时 install.sh 从本机已有副本建软链 |
+| `coding-cli` | `command -v coding-cli` | install.sh 探测常见安装位置建软链；都没有则 `npm i -g @jd/coding-cli` |
 
-**首次使用**：加载本 skill 后、执行任何命令前，先跑一次
-`bash <本skill目录>/install.sh`（幂等，依赖齐全立即退出 0）。
-仍有缺失时脚本会逐项列出，按提示手动安装后再继续。
-`<本skill目录>` = skill 工具输出里的 `Base directory for this skill`。
+**首次使用**：先跑 `bash <本skill目录>/install.sh`（幂等；`<本skill目录>` = skill 工具输出里的 `Base directory for this skill`）。
 
 这些规则全部来自 `coding<internal-domain>:xLLM_AI/xllm.git` 上真实的推送失败，
 必须严格照做——平台用服务端钩子强制执行。
 
 ## 输出范式（所有技能统一）
 
-本 skill 产出的**一切对外内容**（对话回复、PR/MR 描述、评审回复、报错信息、结果汇总）
-必须先按 `meta/user-communication` skill 的「原则」与「禁止写法」自检后再发出：
-用词准确无歧义、先上下文后结论、证据先行；不满足范式的输出不许发出。
+本 skill 的一切对外输出，发出前按 `meta/user-communication` 的原则与禁止写法自检。
 
-## 生命周期总纲（先读这个；其余章节是它的参考手册）
+## 生命周期总纲
 
-**黄金规则：本地 `main` 永远零提交**——它只是 `coding/main` 的只读镜像，
-一切工作都在 `feat/<name>` 分支上做，MR 合入后分支用完即删。
-这条规则成立后，squash 合入策略下没有任何环节需要现场推导：
+分支生命周期（main 零提交 + `feat/<name>` + 合入后删分支）、推送单位 = 1 个压好的提交、
+PR/MR 标题与三段式正文，三平台共用，**先读 `common/pr-mr-workflow`**。
+行云把那套流程里的 `<remote>` 换成 `coding` 即可，无需任何改写。
 
-| 环节 | 固定动作（照抄，不要发明） |
-| --- | --- |
-| ① 同步主干（日常 / 合入后 / 定期，无脑跑） | `git checkout main && git fetch coding main && git reset --hard coding/main` |
-| ② 开新特性 | `git checkout -b feat/<name> main` |
-| ③ 开发 | 本地随便 WIP 提交（消息随意，推送前反正会压掉） |
-| ④ 推送 / 建 MR | 固定六行（下面）；MR 标题/正文按「PR/MR 规范」+ coding-cli 章节 |
-| ⑤ 评审轮次 | 改代码 → 自测 → 重复④ → 合并回复（详见 xingyun-reviewer skill） |
-| ⑥ MR 合入后 | 平台没自动删就删远端分支 → `git branch -D feat/<name>` → 回① |
-
-**④ 的固定六行**（推送单位 = 1 个压好的合规提交，理由见「提交组织与推送单位」。
-不管本地历史被造成什么样，六行永远收敛到同一个结果：1 个基于最新 main 的合规提交）：
-
-```bash
-git fetch coding main
-git add -u && git commit -m "wip" || true   # 先收口才能 rebase（没改动就跳过）
-git rebase coding/main                      # 三方合并，冲突只在这解（单提交最多一轮）
-base=$(git merge-base HEAD coding/main)     # rebase 后 = coding/main 顶端
-new=$(printf '%s' "feat: one two three four." | git commit-tree "$(git rev-parse HEAD^{tree})" -p "$base")
-git reset --hard "$new" && git push --force-with-lease coding feat/<name>
-```
-
-- `git add -u` 只收**已跟踪**文件；未跟踪新文件按需显式 `git add`；
-  子模块 gitlink 漂移要不要进提交逐案判断（见「子模块处理」）。
-- 平台合入用 squash → 主干上每个 PR 只落 1 个提交，**由平台保证**，
-  本地分支怎么组织提交都不影响主干；WIP 消息不必合规（压掉后不进推送载荷），
-  最终消息必须过钩子正则（见下文）。
-- 长周期分支的定期同步 = ④ 的前三行（fetch + 收口 + rebase）；
-  不推送就不用压，下次推送时六行自动收编。
-- 一切"分叉 / patch-id / pull 冲突"的根源都是往本地 main 提交过代码。
-  违反黄金规则后的补救见 sync-after-squash-merge skill——但正道是别违反。
+本文件只讲行云独有的五处，其余不重复：提交信息钩子正则、尾部换行陷阱、
+coding 链路的 rebase/fetch 排障、子模块处置、coding-cli 与容器/宿主机 UID 互踩。
 
 ## 提交身份
 
@@ -127,50 +94,14 @@ full = subprocess.run(['git','log','-1','--format=%B',sha],capture_output=True,t
 assert pat.match(full)
 ```
 
-## 提交组织与推送单位（squash 语义下的行业惯例）
+## 行云为什么把推送单位固定为 1 个提交
 
-**原则（行业最优实践，squash 主干通用）**：
+通用理由见 `common/pr-mr-workflow`；行云的额外成本差异有两条：
 
-- **变更单元是 PR，不是提交**：one PR = one logical change。
-- **分支历史是一次性草稿**：平台 squash 合入会把分支上所有提交压成主干上的
-  1 个提交，本地怎么组织提交完全不影响主干。开发期**随便打 WIP 提交**
-  （消息随意）——这正是 squash 模式的核心好处，不用维护分支历史的美观。
-- "每个 PR 在主干上只落 1 个提交"由**平台的合入动作**保证，不需要、也不应该
-  在本地把"单提交分支"当成教条去维护。
-- 分叉/patch-id 问题的正解是黄金规则（本地 main 零提交 + 合入后删分支 +
-  reset 同步，见总纲），与分支上有几个提交**无关**
-  （2026-10-09 事故的根源是往本地 main 提交，不是多提交分支）。
+- 钩子校验**推送载荷里的每一个提交**（正则 + 无换行）：推 N 个提交 = N 次 commit-tree 重建，推 1 个只需一次。
+- squash 落到主干的消息由平台生成（实测带 `(#N)` 后缀），单提交让落库内容完全可控。
 
-**行云的成本差异（推送单位为什么固定为 1 个压好的提交）**：
-
-- 行云钩子校验**推送载荷里的每一个提交**（正则 + 无换行）：推 N 个提交
-  = N 次 commit-tree 重建；推 1 个 = 一次（即总纲④的六行）。
-- squash 落到主干的消息由平台从分支/PR 生成（实测带 `(#N)` 后缀）——
-  单提交让落库消息完全可控。
-- 评审轮次两种行业做法都合法：每轮 append 修复提交（平台最后压掉）或每轮
-  重压。行云上 append 同样要过钩子重建，所以**每轮重压回 1 个**最省
-  （重复总纲④）；确需让评审人分步看时，推多个合规提交用上节的重建循环，
-  只是更贵。
-
-**压法**（= 总纲④的后三行。前提：工作树干净——改动先全部提交成 WIP；
-未跟踪文件与子模块漂移不受 `reset --hard` 影响，但**要保留的未提交改动会丢**，
-先确认；跑之前用 `git branch --show-current` 确认就在目标分支上）：
-
-```bash
-base=$(git merge-base HEAD coding/main)   # 分支基点；rebase 过即最新 main
-tree=$(git rev-parse HEAD^{tree})         # 当前最终内容
-new=$(printf '%s' "feat: one two three four." | git commit-tree "$tree" -p "$base")
-git reset --hard "$new"                   # 分支上只剩这 1 个提交
-git push --force-with-lease coding <branch>
-```
-
-要点：
-
-- `commit-tree` 直接喂无换行消息——尾部换行陷阱一并绕开（见上节）。
-- 消息必须过钩子正则：`类型: 至少 4 个词.`，只要标题。
-- WIP 提交的消息**不必**合规——压掉后不进推送载荷，钩子看不到。
-- 历史遗留的多提交分支要推送时，同样先压成 1 个再推；上节的多提交
-  commit-tree 重建循环用于"确实要推多个提交"的场景。
+评审轮次每轮重压回 1 个提交最省。确需让评审人分步看多个提交时，用下节的重建循环逐个改写，只是更贵。
 
 ## rebase 到行云 main（= 总纲④的第三行；长周期分支定期同步同此）
 
@@ -223,16 +154,12 @@ git push --force-with-lease coding <branch>
 绝不要对 coding 跑 `git fetch --depth=1`（会把仓库弄成 shallow）。
 注意：普通 `git stash` 能收下 gitlink 漂移，`git stash push -- <path>` 收不下。
 
-## 端到端流程（生命周期总纲④ 的 stash 变体）
+## stash 变体（子模块漂移要留在工作区时）
 
-与总纲④等价，差别是用 `git stash` 收口——适合子模块 gitlink 漂移想留在
-工作区、不进 WIP 提交的场景：
+通用压提交流程用 WIP 提交收口。若子模块 gitlink 漂移想留在工作区、不进提交，
+把收口那一步换成 `git stash push -m "wip"` → `git fetch` → `git rebase` → `git stash pop`，
+其余步骤不变。注意 `git stash` 能收下 gitlink 漂移，而 `git stash push -- <path>` 收不下。
 
-```bash
-git stash push -m "wip"                     # capture worktree changes (incl. gitlink drift)
-git fetch coding main
-git rebase coding/main                      # resolve conflicts if any
-git stash pop
 # ... 构建 + 测试（SKIP_TEST=1 打 wheel），然后提交 WIP（消息随意，推送前会压掉）：
 git add <files>                             # decide case-by-case whether submodule
                                             # pointer updates belong in the commit
@@ -248,51 +175,25 @@ git push --force-with-lease coding <branch> # the branch the work actually lives
 上面的分支名、子模块处置、文件清单都只是历史会话的参考样例——
 一律按仓库当时的真实状态和用户的真实意图来。
 
-## PR/MR 规范（行云与 gitcode/github 三平台统一）
+## PR/MR 标题与描述
 
-在行云发起 PR/MR 时（push 分支成功后），标题与描述遵循团队统一规范：
-
-> **边界**：本规范只约束 **PR/MR 标题与描述**，提交信息仍按上方「提交信息格式」执行，
-> 两者互不影响。
-
-**标题**：间接直白、用最精简准确的话描述 PR 主题，**纯英文，统一用小写英文单词**
-（`type: 小写描述.`，如 `bugfix: cap launch blocks for kernels.`，与本仓提交信息同风格；不要句首大写）。
-
-**平台差异**：行云 MR 是**同仓库内不同分支**做 PR；gitcode/github 是**跨仓库**（fork → 上游），
-同样走 `feat/<name>` 分支、本地 main 零提交（head=`<fork_owner>:feat/<name>`）——那套规则见 gitcode-github-pr skill，别混用。
-
-**正文三段式**（内容用中文，每段带 emoji + 英文关键字，顺序：why → what → verified）：
-
-1. **## 🎯 为什么修改（why）**：先写修改前现状（编号清单——共存的多份实现/多条路径，各自被谁使用），
-   再写带来的问题（编号列表），最后写修改后的范围与覆盖清单（哪些场景/模型/模块被覆盖、哪些明确不覆盖）。
-2. **## 🔧 改了什么（what）**：按使用方视角**自顶向下**分组（每条以加粗小标题开头），每条一句话；
-   清理/删除类改动**独立成条并写明原因**；涉及多仓改动时单列一条说明子模块指针前进。
-3. **## ✅ 已完成的验证（verified）**：标题用英文过去式（verified，不用 verification）；
-   按**算子级/单元级**与**服务级/集成级**分表呈现（列：测试用例 | 结果）；每条结论必须附**真实日志原文**
-   （代码块包裹、标注来源文件路径）——无日志或截图佐证的结果不许写进描述。
-
-**格式规范**：
-- 三段标题用 `## 🎯 为什么修改（why）` / `## 🔧 改了什么（what）` / `## ✅ 已完成的验证（verified）`（**h2**；h1 字号过大，不要用 `#`）
-- 保留空行与列表版式：压缩字数不许牺牲排版，禁止把内容挤成整段一行式
-- **面向读者的表达**：描述写读者能懂的语言——调用者感知不到的内部细节（参数序、符号签名、字段布局、版本演进过程等）**不进描述与注释**，用一句概括代替（如"调用封装与实现 kernel 配套"）。行云评审侧有 agent，只做模式匹配：多一个无关名词就多一轮猜测线程，浪费所有人时间
-- **专业化表达**：术语准确、每条结论有实测数据支撑；挤掉一切与改动无直接关系的细节。这条同样约束**改动代码里的注释**——只写调用者需要知道的行为契约，不写实现演进的过程叙述
-- 关联子模块/依赖仓的 PR 链接单独列 `## 🔗 关联子模块 PR` 节
-- 测试输出用代码块（\`\`\`包裹），截取关键行
-- 可用 emoji 增强可读性：🔧 改动、✅ 通过、📊 数据、⚠️ 注意
-
-**描述长度限制（行云硬限制 2000 字）**：超限报错 `描述长度不能超过2000`。
-处理：**不要为塞进 2000 字压缩句子或版式**——把放不下的整段内容（验证日志、关联 PR 明细等）移到第一条评论（\`~/bin/coding-cli mr note <编号> -m "$(cat body.md)"\`），描述里留一行"详见评论"指引。
-
-**创建纪律**：用户说"起草"= 只要草稿；对稿子的任何修改意见（包括改标题）都**不等于创建授权**；
-必须等用户对最终稿明确说"可以创建/确认提交"才可调用 `mr create`。误创建立即 `mr close` 并说明。
+见 `common/pr-mr-workflow`（含行云 2000 字描述上限的处置）。提交信息另按本文件「提交信息格式」执行，两者互不影响。
 
 ## coding-cli 常用命令（行云 PR/MR 操作）
 
-工具路径：`~/bin/coding-cli`（宿主机和容器均可，`~/.bashrc` 已加 PATH）。
+调用方式：命令名就写 `coding-cli`，**路径一律用 `command -v coding-cli` 判定，不要硬编码**——
+容器里装在 `~/bin`，宿主机装在包管理器前缀下，写死任一个都会在另一处把"路径不对"误判成"工具缺失"。
+
+报 `env: node: No such file or directory` 是**解释器**不在当前 shell 的 PATH 里（coding-cli 是 node 脚本），
+不是工具缺失。换一个会加载用户 PATH 配置的 shell 调用（例如 `fish -c '<命令>'`），或临时把 node 所在
+目录加进 PATH；在非交互 shell 里尤其常见，因为版本管理器的 PATH 设置通常只写进交互 shell 的配置。
+
+MR 是否存在、是否已合入**只认 coding-cli/API 的返回**。`refs/merge-requests/*` 是陈旧快照
+（实测滞后 20 多个编号），不得用 git ref 反推 MR 状态。
 
 ```bash
 # 创建 MR（不需要 checkout，直接用已推送的分支）
-~/bin/coding-cli mr create \
+coding-cli mr create \
   --source-branch feat/xxx \
   --base main \
   --title "feat: xxx yyy zzz www." \
@@ -305,12 +206,12 @@ git push --force-with-lease coding <branch> # the branch the work actually lives
   -R xLLM_AI/xllm
 
 # 更新 MR（改标题/描述/评审人）
-~/bin/coding-cli mr update <MR编号> -R xLLM_AI/xllm -t "新标题" -b "新描述"
+coding-cli mr update <MR编号> -R xLLM_AI/xllm -t "新标题" -b "新描述"
 
 # 查看/列出/关闭/重开
-~/bin/coding-cli mr view <编号> -R xLLM_AI/xllm
-~/bin/coding-cli mr list -R xLLM_AI/xllm
-~/bin/coding-cli mr close <编号> -R xLLM_AI/xllm
+coding-cli mr view <编号> -R xLLM_AI/xllm
+coding-cli mr list -R xLLM_AI/xllm
+coding-cli mr close <编号> -R xLLM_AI/xllm
 ```
 
 注意：`-b` 是 body（不是 `--description`）；`-R` 指定仓库（不是 `-r`）。

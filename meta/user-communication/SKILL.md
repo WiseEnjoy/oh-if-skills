@@ -9,10 +9,7 @@ description: "所有技能对外输出发出前的统一校对规则：对话回
 
 无外部依赖（纯规则，不执行命令）。配套 `install.sh` 只做基础环境自检。
 
-**首次使用**：加载本 skill 后、执行任何命令前，先跑一次
-`bash <本skill目录>/install.sh`（幂等，依赖齐全立即退出 0）。
-仍有缺失时脚本会逐项列出，按提示手动安装后再继续。
-`<本skill目录>` = skill 工具输出里的 `Base directory for this skill`。
+**首次使用**：先跑 `bash <本skill目录>/install.sh`（幂等；`<本skill目录>` = skill 工具输出里的 `Base directory for this skill`）。
 
 这不是一个"专门的技能"，而是**所有技能输出都必须服从的范式**：
 本 skill 常驻生效（元规范，永远不按场景取舍），约束每一个技能产出的每一段

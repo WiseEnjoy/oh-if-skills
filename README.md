@@ -21,6 +21,7 @@ nested directories recursively, so copy the category folder too.
 | --- | --- |
 | [safe-ops-rules](common/safe-ops-rules/) | Safety checks before destructive operations (rm, kill, revert, re-run) |
 | [long-running-commands](common/long-running-commands/) | Run long tasks (builds, tests, downloads) detached with `setsid`, without timeout kills |
+| [pr-mr-workflow](common/pr-mr-workflow/) | **Single source of truth** for branch lifecycle and PR/MR conventions shared by all three platforms: golden rule (zero commits on local main), one squashed compliant commit per push, lowercase title, three-section body |
 | [xllm-build](common/xllm-build/) | Build xLLM safely in the real repository, handling busy binaries, intentional submodule drift, detached builds, and state restoration |
 
 ### specialized/ — platform-specific workflows
@@ -71,16 +72,26 @@ Every skill directory must satisfy all of:
 
 ## Installation
 
+Clone once, then **symlink** — every agent reads the same working copy, so a
+`git pull` or a local edit takes effect everywhere on the next session:
+
 ```bash
-# clone and copy the categories (or single skills) you need
-git clone https://github.com/WiseEnjoy/oh-if-skills.git
-cp -r oh-if-skills/meta oh-if-skills/common oh-if-skills/specialized ~/.config/opencode/skills/
-# or for project-specific skills:
-cp -r oh-if-skills/common/<skill> <your-repo>/.claude/skills/
+git clone https://github.com/WiseEnjoy/oh-if-skills.git ~/git/oh-if-skills
+REPO=~/git/oh-if-skills
+
+# Codex / JoyCode and Claude Code: flat per-skill symlinks (skill name == link name)
+for d in "$REPO"/{meta,common,specialized}/*; do
+  ln -sfn "$d" ~/.codex/skills/$(basename "$d")
+  ln -sfn "$d" ~/.claude/skills/$(basename "$d")
+done
+
+# OpenCode: category symlinks (it discovers nested dirs recursively)
+for c in meta common specialized; do ln -sfn "$REPO/$c" ~/.config/opencode/skills/$c; done
 ```
 
-Run each skill's `install.sh` once before first use — it is idempotent and
-exits immediately when dependencies are already present.
+Copying instead of symlinking also works, but then every update has to be
+re-copied to each agent. Run each skill's `install.sh` once before first use —
+it is idempotent and exits immediately when dependencies are already present.
 
 ## Writing your own skill
 

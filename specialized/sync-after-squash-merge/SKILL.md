@@ -11,14 +11,11 @@ description: "MR 被平台 squash 合入主干后本地分支的快速同步：�
 | --- | --- | --- |
 | `git` | `command -v git` | 环境预装，install.sh 自检 |
 
-**首次使用**：加载本 skill 后、执行任何命令前，先跑一次
-`bash <本skill目录>/install.sh`（幂等，依赖齐全立即退出 0）。
+**首次使用**：先跑 `bash <本skill目录>/install.sh`（幂等；`<本skill目录>` = skill 工具输出里的 `Base directory for this skill`）。
 
 ## 输出范式（所有技能统一）
 
-本 skill 产出的**一切对外内容**（对话回复、结果汇总、报错信息）必须先按
-`meta/user-communication` skill 的「原则」与「禁止写法」自检后再发出：
-用词准确无歧义、先上下文后结论、证据先行。
+本 skill 的一切对外输出，发出前按 `meta/user-communication` 的原则与禁止写法自检。
 
 ## 场景识别（对上号就走下面的快路）
 
