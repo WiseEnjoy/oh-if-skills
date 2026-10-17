@@ -50,23 +50,6 @@ ps aux | grep -E "<command keyword>" | grep -v grep
 
 同一套写法适用于构建、装依赖、模型/数据集下载、长测试套件、数据迁移——命令换掉即可。
 
-# C++/python 项目构建（xLLM 示例；go 在 /usr/local/go/bin）
-setsid bash -c 'export PATH=/usr/local/go/bin:$PATH; cd <your-xllm-repo>; \
-  python setup.py build > /tmp/agent/xllm_build.log 2>&1' < /dev/null > /dev/null 2>&1 &
-
-# 装依赖 / 打 wheel
-setsid bash -c 'pip install -r requirements.txt > /tmp/agent/pip_install.log 2>&1' < /dev/null > /dev/null 2>&1 &
-
-# 模型 / 数据集 / 大文件下载
-setsid bash -c 'huggingface-cli download <repo> > /tmp/agent/hf_download.log 2>&1' < /dev/null > /dev/null 2>&1 &
-
-# 长测试套件
-setsid bash -c 'ctest --output-on-failure > /tmp/agent/ctest.log 2>&1' < /dev/null > /dev/null 2>&1 &
-
-# 其它长脚本 / 数据迁移
-setsid bash -c 'python preprocess.py > /tmp/agent/preprocess.log 2>&1' < /dev/null > /dev/null 2>&1 &
-```
-
 ## 盯一个已脱离的任务
 
 用一次次短调用轮询，绝不用一次长调用阻塞：

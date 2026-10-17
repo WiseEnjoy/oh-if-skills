@@ -59,33 +59,18 @@ user.email = <your-email>
 
 ## 尾部换行陷阱
 
-Git 永远存成 `"title\n"`，而钩子的正则是严格的行尾 `$` 语义，于是
-**每一个正常创建的提交都会被拒**，报 `'<sha>' 中的提交信息不符合格式要求`，
-哪怕标题看着完全合规（已实测：同一段文字去掉尾部换行就能过）。
+Git 永远把消息存成 `"title\n"`，而钩子的正则是严格行尾 `$` 语义，于是**每一个正常创建的提交都会被拒**，
+报 `'<sha>' 中的提交信息不符合格式要求`，哪怕标题看着完全合规（实测：同一段文字去掉尾部换行就能过）。
 
-绕过办法——用 `git commit-tree` 去掉尾部换行重建提交，保留 tree / parents /
-author / committer：
+绕过办法就是通用流程里的 `git commit-tree`（见 `common/pr-mr-workflow`）——`printf '%s'` 不带换行喂进去即可，
+推送单位固定为 1 个提交时这一步天然把陷阱绕开，不需要额外动作。
 
-```bash
-# 按顺序把 NEW..OLD-TIP 之间的提交重写成无换行消息
-prev=<new-base>            # 例如这串提交所基于的那个提交
-for sha in <sha1> <sha2> <sha3>; do
-  tree=$(git rev-parse "$sha^{tree}")
-  an=$(git log -1 --format=%an $sha); ae=$(git log -1 --format=%ae $sha)
-  ad=$(git log -1 --format=%aD $sha)
-  cn=$(git log -1 --format=%cn $sha); ce=$(git log -1 --format=%ce $sha)
-  cd=$(git log -1 --format=%cD $sha)
-  msg=$(git log -1 --format=%B $sha | python3 -c "import sys; sys.stdout.write(sys.stdin.read().rstrip('\n'))")
-  new=$(printf '%s' "$msg" | GIT_AUTHOR_NAME="$an" GIT_AUTHOR_EMAIL="$ae" \
-        GIT_AUTHOR_DATE="$ad" GIT_COMMITTER_NAME="$cn" \
-        GIT_COMMITTER_EMAIL="$ce" GIT_COMMITTER_DATE="$cd" \
-        git commit-tree "$tree" -p "$prev")
-  echo "$sha -> $new"; prev=$new
-done
-git push --force-with-lease coding $prev:refs/heads/<branch>
-```
+确实要推多个提交时，对每个提交用 `commit-tree` 重建并串成链：保留原 `tree` 与 `author`/`committer`
+（`git log -1 --format=%an/%ae/%aD/%cn/%ce/%cD`），消息用 `rstrip('\n')` 去尾换行，
+前一个重建结果作为下一个的 `-p`，最后 `git push --force-with-lease coding <new-tip>:refs/heads/<branch>`。
+成本是 N 次重建，所以默认别这么干。
 
-推送前先在本地预检：
+推送前本地预检（正则与钩子一致）：
 
 ```python
 import re, subprocess
@@ -160,21 +145,6 @@ git push --force-with-lease coding <branch>
 把收口那一步换成 `git stash push -m "wip"` → `git fetch` → `git rebase` → `git stash pop`，
 其余步骤不变。注意 `git stash` 能收下 gitlink 漂移，而 `git stash push -- <path>` 收不下。
 
-# ... 构建 + 测试（SKIP_TEST=1 打 wheel），然后提交 WIP（消息随意，推送前会压掉）：
-git add <files>                             # decide case-by-case whether submodule
-                                            # pointer updates belong in the commit
-git commit -m "wip"
-# 压成单提交（见「提交组织与推送单位」），commit-tree 无换行，钩子陷阱一并绕开：
-base=$(git merge-base HEAD coding/main)
-new=$(printf '%s' "bugfix: <>=4 words description here." | \
-      git commit-tree "$(git rev-parse HEAD^{tree})" -p "$base")
-git reset --hard "$new"
-git push --force-with-lease coding <branch> # the branch the work actually lives on
-```
-
-上面的分支名、子模块处置、文件清单都只是历史会话的参考样例——
-一律按仓库当时的真实状态和用户的真实意图来。
-
 ## PR/MR 标题与描述
 
 见 `common/pr-mr-workflow`（含行云 2000 字描述上限的处置）。提交信息另按本文件「提交信息格式」执行，两者互不影响。
@@ -197,12 +167,7 @@ coding-cli mr create \
   --source-branch feat/xxx \
   --base main \
   --title "feat: xxx yyy zzz www." \
-  -b "## 🎯 为什么修改（why）
-...
-## 🔧 改了什么（what）
-...
-## ✅ 怎么验证的（verification）
-..." \
+  -b "$(cat body.md)"   `# 正文按 common/pr-mr-workflow 的三段式起草后落盘再引用` \
   -R xLLM_AI/xllm
 
 # 更新 MR（改标题/描述/评审人）
