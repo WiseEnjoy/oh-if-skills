@@ -13,14 +13,11 @@ description: "构建 xLLM（本机或远端）前必须使用的通用流程：�
 | `python3` | `command -v python3` | 环境预装，install.sh 自检 |
 | `setsid` | `command -v setsid` | install.sh 自动安装 util-linux |
 
-**首次使用**：加载本 skill 后、执行任何命令前，先跑一次
-`bash <本skill目录>/install.sh`（幂等，依赖齐全立即退出 0）。
-仍有缺失时脚本会逐项列出，按提示手动安装后再继续。
+**首次使用**：先跑 `bash <本skill目录>/install.sh`（幂等；`<本skill目录>` = skill 工具输出里的 `Base directory for this skill`）。
 
 ## 输出范式（所有技能统一）
 
-本 skill 产出的**一切对外内容**必须先按 `meta/user-communication` 的原则与
-禁止写法自检后再发出：证据先行、结论准确，不输出无依据的猜测。
+本 skill 的一切对外输出，发出前按 `meta/user-communication` 的原则与禁止写法自检。
 
 ## 规则
 

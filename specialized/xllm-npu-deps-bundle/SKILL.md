@@ -20,9 +20,7 @@ Build the unified deps bundle in the current environment — everything runs on 
 
 ## 输出范式（所有技能统一）
 
-本 skill 产出的**一切对外内容**（对话回复、报错信息、结果汇总）必须先按
-`meta/user-communication` skill 的「原则」与「禁止写法」自检后再发出：
-用词准确无歧义、先上下文后结论、证据先行；不满足范式的输出不许发出。
+本 skill 的一切对外输出，发出前按 `meta/user-communication` 的原则与禁止写法自检。
 
 ## Source of truth
 

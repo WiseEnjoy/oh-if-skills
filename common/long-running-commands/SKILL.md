@@ -1,6 +1,6 @@
 ---
 name: long-running-commands
-description: "预计跑超过 2 分钟的命令（编译、测试、pip/npm 安装、模型或数据集下载、数据迁移、dev server、watch 循环）怎么启动和盯着：必须用 setsid 完全脱离进程组并把输出重定向到日志，否则 opencode 的 bash 工具 120 秒一到会连进程组一起杀掉（典型症状 ninja: build stopped: interrupted by user）。包含启动模板、轮询进度、超时后先 ps 确认再决定是否重跑。触发词：后台运行、编译、下载、安装、跑测试、setsid。"
+description: "预计跑超过 2 分钟的命令（编译、测试、pip/npm 安装、模型或数据集下载、数据迁移、dev server、watch 循环）怎么启动和盯着：必须新建会话组脱离调用方进程组并把输出重定向到日志，否则 agent 的命令工具一超时会连整个进程组杀掉（典型症状 ninja: build stopped: interrupted by user）；Linux 用 setsid，macOS 没有 setsid 用 python os.setsid 兜底。含轮询纪律、真实核数判定（不许信 nproc）、永不编辑正在运行的脚本。触发词：后台运行、编译、下载、安装、跑测试、setsid。"
 ---
 
 # 长任务必须完全脱离进程组（setsid）
@@ -9,48 +9,47 @@ description: "预计跑超过 2 分钟的命令（编译、测试、pip/npm 安�
 
 | 依赖 | 检查 | 缺失时 |
 | --- | --- | --- |
-| `setsid` | `command -v setsid` | install.sh 自动安装 util-linux |
+| 新建会话组的能力 | `command -v setsid` 或 `python3 -c 'import os; os.setsid'` | Linux 用 install.sh 装 util-linux；macOS 无 setsid，用 python 兜底写法 |
 
-**首次使用**：加载本 skill 后、执行任何命令前，先跑一次
-`bash <本skill目录>/install.sh`（幂等，依赖齐全立即退出 0）。
-仍有缺失时脚本会逐项列出，按提示手动安装后再继续。
-`<本skill目录>` = skill 工具输出里的 `Base directory for this skill`。
+**首次使用**：先跑 `bash <本skill目录>/install.sh`（幂等；`<本skill目录>` = skill 工具输出里的 `Base directory for this skill`）。
 
 ## 为什么普通后台跑不行
 
-opencode 的 bash 工具默认 120 秒超时。命令一旦超时，工具会杀掉那次调用的
-**整个进程组**。这对所有长任务都成立——编译、测试、安装、下载、脚本，
-不只是构建。普通后台化扛不住：
+agent 的命令工具都有调用超时（opencode 实测 120 秒），超时会杀掉该次调用的**整个进程组**——
+编译、测试、安装、下载、脚本一律适用。`nohup cmd &` **不安全**：它只忽略 SIGHUP，
+进程仍在同一进程组里。典型症状：`ninja: build stopped: interrupted by user`，
+或任务"莫名其妙"在启动几分钟后停掉。
 
-- `nohup cmd &` **不安全**：nohup 只是忽略 SIGHUP，进程仍在同一个进程组里，
-  工具超时照样被杀。
-- 启动后超时的典型症状：`ninja: build stopped: interrupted by user`，
-  或者某个任务"莫名其妙"在启动几分钟后停掉。
+宿主机若提供"后台会话/yielded session"原语（JoyCode、Codex 等），优先用它，
+本 skill 的脱离写法用于只有一次性命令工具的环境。
 
 ## 输出范式（所有技能统一）
 
-本 skill 产出的**一切对外内容**（对话回复、PR/MR 描述、评审回复、报错信息、结果汇总）
-必须先按 `meta/user-communication` skill 的原则与禁止写法自检后再发出：
-用词准确无歧义、先上下文后结论、证据先行；不满足范式的输出不许发出。
+本 skill 的一切对外输出，发出前按 `meta/user-communication` 的原则与禁止写法自检。
 
 ## 规则
 
-任务可能跑超过约 2 分钟，就用 `setsid` 脱离启动、断开 stdin、输出重定向到日志：
+任务可能跑超过约 2 分钟，就**新建会话组**启动、断开 stdin、输出重定向到日志。
+`setsid` 只在 Linux（util-linux）上有，macOS 没有——所以先探，再退到 python 的 `os.setsid`：
 
 ```bash
-setsid bash -c 'cd /path/to/workdir && <command> > /tmp/opencode/<task>.log 2>&1' \
-  < /dev/null > /dev/null 2>&1 &
+# Linux
+setsid bash -c 'cd <workdir> && <command> > /tmp/agent/<task>.log 2>&1' < /dev/null > /dev/null 2>&1 &
+
+# 可移植（Linux + macOS 通用，没有 setsid 时用这条）
+python3 -c 'import os,subprocess,sys; os.setsid(); \
+  subprocess.Popen(sys.argv[1:], stdout=open("/tmp/agent/<task>.log","w"), \
+  stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL)' bash -lc 'cd <workdir> && <command>' &
 ```
 
-然后在**另一次**工具调用里确认它活着，绝不在同一次调用里确认：
+日志目录先 `mkdir -p`。启动后在**另一次**工具调用里确认它活着，绝不在同一次调用里确认：
 
 ```bash
 ps aux | grep -E "<command keyword>" | grep -v grep
 ```
 
-典型场景，同一套写法：
+同一套写法适用于构建、装依赖、模型/数据集下载、长测试套件、数据迁移——命令换掉即可。
 
-```bash
 # C++/python 项目构建（xLLM 示例；go 在 /usr/local/go/bin）
 setsid bash -c 'export PATH=/usr/local/go/bin:$PATH; cd <your-xllm-repo>; \
   python setup.py build > /tmp/opencode/xllm_build.log 2>&1' < /dev/null > /dev/null 2>&1 &

@@ -1,6 +1,6 @@
 ---
 name: xingyun-reviewer
-description: "行云 MR 来了评审意见后的完整处理循环：拉评论（coding-cli）→ 按 改代码/提问/认可/CI问题/格式/无关 分类 →要改代码的先自测再进容器提交推送（每轮修复压回 1 个合规提交再 force-with-lease——行云钩子逐提交校验，单提交是成本最优推送单位）→ 评论回复优先合并为带 discussion ID 的总览（Diff 线程能原地回复就保留上下文；同一 reviewer 的多条 MR 级意见默认合为一条，不同 reviewer 分开回复；给了 ✅已修复 / 💡说明 / 🤔有不同看法 模板），循环到所有线程关闭。含自测三规则（零残留、功能测试、干净环境）、会话内 30 秒后台轮询的启动脚本、以及别人的 MR 不碰、CI 不是自己引起的先问用户等边界。用户说 处理评审意见 / 回复 reviewer / 盯这个 MR 时使用，需要 MR 编号。"
+description: "行云 MR 评审意见处理循环：拉评论 → 按改代码/提问/认可/CI/格式/无关分类 → 要改代码的先自测再在容器内提交并重压推送 → 回复优先合并成带 discussion ID 的总览。含自测三规则（零残留、功能测试、干净环境）、✅已修复/💡说明/🤔有不同看法模板、别人的 MR 不碰与 CI 非自身引起先问用户等边界。触发词：处理评审意见、回复 reviewer、盯这个 MR。"
 ---
 
 # xingyun-reviewer（行云 MR 检视意见自动处理）
@@ -9,28 +9,24 @@ description: "行云 MR 来了评审意见后的完整处理循环：拉评论�
 
 | 依赖 | 检查 | 缺失时 |
 | --- | --- | --- |
-| `coding-cli` | `command -v coding-cli` | 缺失时 install.sh 从本机已有副本建软链 |
+| `coding-cli` | `command -v coding-cli` | install.sh 探测常见安装位置建软链；都没有则 `npm i -g @jd/coding-cli` |
 | `python3` | `command -v python3` | 环境预装，install.sh 自检 |
 | `git` | `command -v git` | 环境预装，install.sh 自检 |
 | `docker` | `command -v docker` | 可选：容器内执行 git/自测时才需要 |
 
-**首次使用**：加载本 skill 后、执行任何命令前，先跑一次
-`bash <本skill目录>/install.sh`（幂等，依赖齐全立即退出 0）。
-仍有缺失时脚本会逐项列出，按提示手动安装后再继续。
-`<本skill目录>` = skill 工具输出里的 `Base directory for this skill`。
+**首次使用**：先跑 `bash <本skill目录>/install.sh`（幂等；`<本skill目录>` = skill 工具输出里的 `Base directory for this skill`）。
 
 监控行云 MR，处理评审意见：修代码、自测、推送、回复评审人。
 这个循环一直跑到所有评审线程都关闭为止。
 
 ## 输出范式（所有技能统一）
 
-本 skill 产出的**一切对外内容**（对话回复、PR/MR 描述、评审回复、报错信息、结果汇总）
-必须先按 `meta/user-communication` skill 的「原则」与「禁止写法」自检后再发出：
-用词准确无歧义、先上下文后结论、证据先行；不满足范式的输出不许发出。
+本 skill 的一切对外输出，发出前按 `meta/user-communication` 的原则与禁止写法自检。
 
 ## 前置条件
 
-- `~/bin/coding-cli` 在 PATH 上（容器内和宿主机都能用）
+- `coding-cli` 可用：用 `command -v coding-cli` 判定（容器内外安装路径不同，别硬编码）；
+  报 `env: node: ...` 是解释器不在当前 shell 的 PATH，不是工具缺失——详见 xingyun-push skill「coding-cli 常用命令」节
 - coding<internal-domain> 的 SSH 访问（`~/.ssh` 权限坏了先修，见 xingyun-push skill）
 - xllm 仓库且 pre-commit 钩子可用（优先在容器里做）
 
@@ -49,10 +45,10 @@ description: "行云 MR 来了评审意见后的完整处理循环：拉评论�
 
 ```bash
 # MR 上的全部评论（系统 + 人）
-~/bin/coding-cli api projects/958063/merge_requests/<MR>/notes
+coding-cli api projects/958063/merge_requests/<MR>/notes
 
 # 只要人写的（过滤 system=true）
-~/bin/coding-cli api projects/958063/merge_requests/<MR>/notes | \
+coding-cli api projects/958063/merge_requests/<MR>/notes | \
   python3 -c "
 import json,sys
 for n in json.load(sys.stdin):
@@ -77,11 +73,11 @@ for n in json.load(sys.stdin):
 
 ```bash
 # 回复指定讨论线程（首选）
-~/bin/coding-cli api projects/958063/merge_requests/<MR>/discussions/<thread_id>/notes \
+coding-cli api projects/958063/merge_requests/<MR>/discussions/<thread_id>/notes \
   -X POST -F body="回复内容"
 
 # MR 通用评论（非线程类留言，或作为普通评论回复的总览）
-~/bin/coding-cli mr note <MR> -R xLLM_AI/xllm -m "内容"
+coding-cli mr note <MR> -R xLLM_AI/xllm -m "内容"
 ```
 
 **合并总览必须逐项带 `discussion <id>` 和状态**，按意见顺序列“状态 + 改动 + 自测 + 提交”。
@@ -120,13 +116,13 @@ for n in json.load(sys.stdin):
 3. **语气**：尊重、简短、不加废话（"感谢指出，已修复，commit <sha>"）。
 4. **自测结果**：永远贴真实命令输出，不要只写"已通过"。
 5. **专业化表达**：回复用专业术语 + 实测数据，挤掉一切无关细节——调用者感知不到的内部细节（参数序、签名、字段布局、演进原因）**一个字都不写**，用"调用封装与实现 kernel 配套"级别的概括带过。评审方多半也是 agent，只做模式匹配：多写的每个名词都是给对方的猜测素材，会催生新一轮检视线程（真实教训：注释里一个参数名引出 4 条深审线程 + 3 轮反复）。
-5. **你是这个领域的专家**——评审建议是输入，不是命令：
+6. **你是这个领域的专家**——评审建议是输入，不是命令：
    - 建议**正确**：采纳，并在回复里 credit 评审人。
    - 建议**错误或次优**：拿证据反驳——基准数据、规范/代码引用、或具体反例。
      绝不为了"把线程关掉"就盲从。
    - 建议**部分正确**：采纳对的那部分，具体说明剩下的为什么不适用。
    - **拿不准**：明说拿不准，提出验证实验，或请评审人给出他的理由。
-6. **理性异议模板**：
+7. **理性异议模板**：
 
 ```
 🤔 **有不同看法**
@@ -199,7 +195,7 @@ docker exec <container> bash -c 'cd <your-home-dir>/xllm && \
   git push coding feat/<branch> --force-with-lease'
 
 # 7. 回复评审人（引用压缩后的新 sha）
-~/bin/coding-cli mr note <MR> -R xLLM_AI/xllm -m "回复内容"
+coding-cli mr note <MR> -R xLLM_AI/xllm -m "回复内容"
 ```
 
 **pre-commit 钩子陷阱**：找不到 `pre-commit` 时提交会静默失败。
@@ -208,8 +204,6 @@ docker exec <container> bash -c 'cd <your-home-dir>/xllm && \
 
 ## 自测规则（通用，来自真实失败）
 
-**不可协商：每个修复在提交之前必须先过自测。** 没有测试就不提交。
-测不了就说明原因并问用户。
 
 ### 规则 1：零残留
 
@@ -256,7 +250,7 @@ echo '#!/bin/bash
 MR=<N>
 LAST_TS="<last-processed-timestamp>"
 while true; do
-  ~/bin/coding-cli api projects/958063/merge_requests/$MR/discussions 2>/dev/null | python3 -c "
+  coding-cli api projects/958063/merge_requests/$MR/discussions 2>/dev/null | python3 -c "
 import json,sys
 d=json.load(sys.stdin)
 for thread in d:

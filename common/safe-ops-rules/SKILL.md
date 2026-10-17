@@ -11,10 +11,7 @@ description: "删文件、杀进程、回滚、失败后重跑之前必须先看
 | --- | --- | --- |
 | `git` | `command -v git` | 环境预装，install.sh 自检 |
 
-**首次使用**：加载本 skill 后、执行任何命令前，先跑一次
-`bash <本skill目录>/install.sh`（幂等，依赖齐全立即退出 0）。
-仍有缺失时脚本会逐项列出，按提示手动安装后再继续。
-`<本skill目录>` = skill 工具输出里的 `Base directory for this skill`。
+**首次使用**：先跑 `bash <本skill目录>/install.sh`（幂等；`<本skill目录>` = skill 工具输出里的 `Base directory for this skill`）。
 
 三条硬规则，来自真实事故（2026-09-24：删掉了一个放在名为 `build/` 的目录里的、
 被 git 跟踪的 patch 文件，直接打断了 30 分钟的构建，之后又多跑了好几次完整重编
@@ -22,9 +19,7 @@ description: "删文件、杀进程、回滚、失败后重跑之前必须先看
 
 ## 输出范式（所有技能统一）
 
-本 skill 产出的**一切对外内容**（对话回复、PR/MR 描述、评审回复、报错信息、结果汇总）
-必须先按 `meta/user-communication` skill 的原则与禁止写法自检后再发出：
-用词准确无歧义、先上下文后结论、证据先行；不满足范式的输出不许发出。
+本 skill 的一切对外输出，发出前按 `meta/user-communication` 的原则与禁止写法自检。
 
 ## 规则 1 — 破坏性文件操作：先用 git 验证
 

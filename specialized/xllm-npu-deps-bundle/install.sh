@@ -7,6 +7,8 @@ TAG="xllm-npu-deps-bundle"
 MISSING=()
 log()  { printf '[%s] %s\n' "$TAG" "$*"; }
 have() { command -v "$1" >/dev/null 2>&1; }
+# timeout 只在 GNU coreutils 上有（macOS 没有）：有就用，没有就直接跑
+run_to() { if have timeout; then timeout 300 "$@"; else "$@"; fi; }
 pkg_mgr() {
   if have dnf; then echo dnf; elif have apt-get; then echo apt-get
   elif have yum; then echo yum; else echo ""; fi
@@ -17,8 +19,8 @@ install_pkg() {
   if [ -z "$mgr" ]; then log "缺 $2：机器上没有包管理器，请手动安装 $1"; return 1; fi
   log "安装 $1 ..."
   case "$mgr" in
-    dnf|yum) timeout 300 "$mgr" install -y "$1" >/dev/null 2>&1 ;;
-    apt-get) timeout 300 apt-get install -y "$1" >/dev/null 2>&1 ;;
+    dnf|yum) run_to "$mgr" install -y "$1" >/dev/null 2>&1 ;;
+    apt-get) run_to apt-get install -y "$1" >/dev/null 2>&1 ;;
   esac
   have "$2" || { log "安装 $1 后仍未找到 $2"; return 1; }
 }

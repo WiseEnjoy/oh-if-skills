@@ -13,19 +13,14 @@ description: "用用户名密码把文件或目录拷贝到远程 Linux 主机�
 | `rsync` | `command -v rsync` | install.sh 自动安装；失败则退回 scp -O |
 | `ssh` | `command -v ssh` | 环境预装，install.sh 自检 |
 
-**首次使用**：加载本 skill 后、执行任何命令前，先跑一次
-`bash <本skill目录>/install.sh`（幂等，依赖齐全立即退出 0）。
-仍有缺失时脚本会逐项列出，按提示手动安装后再继续。
-`<本skill目录>` = skill 工具输出里的 `Base directory for this skill`。
+**首次使用**：先跑 `bash <本skill目录>/install.sh`（幂等；`<本skill目录>` = skill 工具输出里的 `Base directory for this skill`）。
 
 用 SSH 用户名/密码认证，把文件/目录拷到远程 Linux 主机，或从远程取回。
 适用于内网集群主机（如 `<internal-host>`），以及任何只接受密码登录的主机。
 
 ## 输出范式（所有技能统一）
 
-本 skill 产出的**一切对外内容**（对话回复、PR/MR 描述、评审回复、报错信息、结果汇总）
-必须先按 `meta/user-communication` skill 的原则与禁止写法自检后再发出：
-用词准确无歧义、先上下文后结论、证据先行；不满足范式的输出不许发出。
+本 skill 的一切对外输出，发出前按 `meta/user-communication` 的原则与禁止写法自检。
 
 ## 必填输入
 

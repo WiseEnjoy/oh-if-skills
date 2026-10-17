@@ -9,9 +9,7 @@ description: "技能自进化的三条铁律 + 稳定周期红线，所有技能
 
 无外部依赖（纯规则，不执行命令）。配套 `install.sh` 只做基础环境自检。
 
-**首次使用**：加载本 skill 后、执行任何命令前，先跑一次
-`bash <本skill目录>/install.sh`（幂等，依赖齐全立即退出 0）。
-`<本skill目录>` = skill 工具输出里的 `Base directory for this skill`。
+**首次使用**：先跑 `bash <本skill目录>/install.sh`（幂等；`<本skill目录>` = skill 工具输出里的 `Base directory for this skill`）。
 
 这不是一个按需触发的技能，而是**所有技能在创建、使用、修改、审查全生命
 周期都必须服从的元规范**（含本文件自身）：创建/修改/审查时按铁律与红线
@@ -21,8 +19,7 @@ description: "技能自进化的三条铁律 + 稳定周期红线，所有技能
 
 ## 输出范式（所有技能统一）
 
-本 skill 产出的**一切对外内容**必须先按 `meta/user-communication` 的
-「原则」与「禁止写法」自检后再发出。
+本 skill 的一切对外输出，发出前按 `meta/user-communication` 的原则与禁止写法自检。
 
 ## 三条铁律（互相制衡，缺一不可）
 
