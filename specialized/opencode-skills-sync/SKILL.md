@@ -17,11 +17,11 @@ description: "维护并发布本技能仓：软链接安装模型（三个 agent
 **首次使用**：先跑 `bash <本skill目录>/install.sh`（幂等；`<本skill目录>` = skill 工具输出里的 `Base directory for this skill`）。
 
 
-两侧不是同一份内容，**默认不同步，只在用户要求时同步**，且永远逐文件对比后单向发布：
+软链接模型下两侧**就是同一份内容**（agent 技能目录指向仓库克隆），所以不存在搬运，只有「改仓库 → 脱敏自检 → 提交 push」一条路：
 
 | | 本地（源） | 公共 GitHub 仓 |
 | --- | --- | --- |
-| 路径 | `~/.config/opencode/skills/<分类>/<name>/SKILL.md` | `WiseEnjoy/oh-if-skills/<分类>/<name>/SKILL.md` |
+| 路径 | 各 agent 技能目录里的软链接 → 仓库克隆 | `WiseEnjoy/oh-if-skills/<分类>/<name>/SKILL.md` |
 | 内容 | 含内网域名、IP、真实用户名、UID、本地路径 | **脱敏占位符版**，供公开分享 |
 | 方向 | 权威源，只进不出 | 单向发布，**绝不反向覆盖本地** |
 
@@ -57,7 +57,7 @@ description: "维护并发布本技能仓：软链接安装模型（三个 agent
 5. **每次改完（新建/编辑）必须跑校验，全绿才算改完**：
 
 ```bash
-cd ~/.config/opencode/skills
+cd <本仓库克隆目录>   # 软链接模型下，权威副本就是仓库工作区
 for f in */*/SKILL.md; do python3 - "$f" <<'EOF'
 import sys, re, os, yaml
 p = sys.argv[1]

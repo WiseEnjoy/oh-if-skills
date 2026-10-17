@@ -72,22 +72,19 @@ Every skill directory must satisfy all of:
 
 ## Installation
 
-Clone once, then **symlink** — every agent reads the same working copy, so a
-`git pull` or a local edit takes effect everywhere on the next session:
+Clone once, then run the idempotent linker — every agent reads the same working
+copy, so a `git pull` or a local edit takes effect everywhere on the next session:
 
 ```bash
 git clone https://github.com/WiseEnjoy/oh-if-skills.git ~/git/oh-if-skills
-REPO=~/git/oh-if-skills
-
-# Codex / JoyCode and Claude Code: flat per-skill symlinks (skill name == link name)
-for d in "$REPO"/{meta,common,specialized}/*; do
-  ln -sfn "$d" ~/.codex/skills/$(basename "$d")
-  ln -sfn "$d" ~/.claude/skills/$(basename "$d")
-done
-
-# OpenCode: category symlinks (it discovers nested dirs recursively)
-for c in meta common specialized; do ln -sfn "$REPO/$c" ~/.config/opencode/skills/$c; done
+bash ~/git/oh-if-skills/install-links.sh
 ```
+
+`install-links.sh` symlinks the three category directories into the skill
+directories of Codex/JoyCode and OpenCode (both discover nested dirs
+recursively, so new skills need no further action), and creates per-skill
+symlinks for Claude Code (one level only), pruning links whose target is gone.
+Re-run it after adding a skill; it is safe to run repeatedly.
 
 Copying instead of symlinking also works, but then every update has to be
 re-copied to each agent. Run each skill's `install.sh` once before first use —
