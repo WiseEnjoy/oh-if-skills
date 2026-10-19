@@ -1,6 +1,6 @@
 ---
 name: pr-mr-workflow
-description: "三平台（行云 coding、gitcode、github）共用的分支与 PR/MR 规范，单一权威来源：黄金规则（本地 main 永远零提交、一切工作在 feat/<name> 分支、合入后删分支）、同步主干与开分支的固定动作、推送单位=1 个压好的合规提交（fetch→收口→rebase→commit-tree→force-with-lease）、PR/MR 纯小写英文标题、🎯why/🔧what/✅verified 三段式正文与格式规范、面向读者的表达边界、起草不等于创建授权。平台特有部分见 xingyun-push（行云钩子与 coding-cli）与 gitcode-github-pr（token、连通性、跨仓库 head/base）。触发词：建 PR、提 MR、写 PR 描述、开分支、压提交、合入后清理。"
+description: "三平台（行云 coding、gitcode、github）共用的分支与 PR/MR 规范，单一权威来源：黄金规则（本地 main 永远零提交、一切工作在 feat/<name> 分支、合入后删分支）、同步主干与开分支的固定动作、提交组织（保留中间演进提交、逐个合规可推、推送前 rebase + force-with-lease）、PR/MR 纯小写英文标题、🎯why/🔧what/✅verified 三段式正文与格式规范、面向读者的表达边界、起草不等于创建授权。平台特有部分见 xingyun-push（行云钩子与 coding-cli）与 gitcode-github-pr（token、连通性、跨仓库 head/base）。触发词：建 PR、提 MR、写 PR 描述、开分支、推提交、合入后清理。"
 ---
 
 # pr-mr-workflow（分支与 PR/MR 统一规范）
@@ -27,33 +27,38 @@ description: "三平台（行云 coding、gitcode、github）共用的分支与 
 | --- | --- |
 | ① 同步主干（日常 / 合入后 / 定期，无脑跑） | `git checkout main && git fetch <remote> main && git reset --hard <remote>/main` |
 | ② 开新特性 | `git checkout -b feat/<name> main` |
-| ③ 开发 | 随便打 WIP 提交（消息随意，推送前会压掉） |
-| ④ 推送 / 建 PR | 压成 1 个合规提交再推（见下节）；标题与正文按本文件规范 |
-| ⑤ 评审轮次 | 改代码 → 自测 → 重复④（每轮重压重推） |
+| ③ 开发 | 直接提交、保留中间演进；消息按「提交组织」写合规（行云钩子逐个校验） |
+| ④ 推送 / 建 PR | fetch → rebase 主干 → 推送（见下节）；标题与正文按本文件规范 |
+| ⑤ 评审轮次 | 改代码 → 自测 → 新提交追加 → 重复④ |
 | ⑥ 合入后 | 删远端分支 → `git branch -D feat/<name>` → 回① |
 
 **PR 方向是唯一的平台差异**：行云在同仓库内分支做 MR；gitcode / github 是跨仓库
 （`feat/<name>` 推到 fork，head=`<fork_owner>:feat/<name>`，base=上游默认分支）。
 方向有歧义（多个 remote、多个同名仓）必须向用户确认，不猜。
 
-## 推送单位 = 1 个压好的提交
+## 提交组织：保留演进，逐个合规
 
-变更单元是 PR 不是提交；平台 squash 合入保证主干上每个 PR 只落 1 个提交，
-所以分支历史是一次性草稿，开发期随便 WIP。推送前收敛成 1 个：
+变更单元是 PR 不是提交。分支上的中间提交就是演进历史——首次实现、评审修复、
+各自的验证过程都保留成独立提交，评审人能看到问题是怎么被一步步修掉的；
+平台 squash 合入最终把主干压成 1 个提交，分支历史不必替它省事。
+
+- **每个提交都要能通过平台校验**（行云钩子校验推送载荷里的每一个提交，见
+  `xingyun-push`）：正常 `git commit` 存的消息带尾部换行，行云必拒——推送前用
+  commit-tree 重建整条分支（现成脚本见 `xingyun-push`「多提交推送」）。
+  gitcode / github 无钩子，正常提交直接推。
+- 提交消息按「标题」节格式写（类型前缀 + ≥4 词 + 句号），演进中间提交同样如此，
+  别用会被钩子拒掉的消息（`fix:`、少词、无句号都不行）。
+- 推送前同步主干，冲突只解一次：
 
 ```bash
 git fetch <remote> main
-git add -u && git commit -m "wip" || true    # 先收口才能 rebase（没改动就跳过）
-git rebase <remote>/main                     # 三方合并，冲突只在这解
-base=$(git merge-base HEAD <remote>/main)    # rebase 后 = 主干顶端
-new=$(printf '%s' "feat: one two three four." | git commit-tree "$(git rev-parse HEAD^{tree})" -p "$base")
-git reset --hard "$new" && git push --force-with-lease <remote> feat/<name>
+git rebase <remote>/main                            # 逐提交重放，冲突在此解
+git push --force-with-lease <remote> feat/<name>    # rebase 后必须
 ```
 
-- `git add -u` 只收已跟踪文件；未跟踪新文件按需显式 `git add`；子模块 gitlink 是否进提交逐案判断。
-- `commit-tree` 直接喂无换行消息，顺带绕开行云钩子的尾部换行陷阱（见 `xingyun-push`）。
-- `reset --hard` 前确认没有要保留的未提交改动（未跟踪文件与子模块漂移不受影响）。
+- `git add -u` 只收已跟踪文件；未跟踪新文件按需显式 `git add`；子模块 gitlink 是否进提交逐案判断（见 `xingyun-push`）。
 - rebase 之后的更新都是非快进的 → 必须 `--force-with-lease`（别人动过该 ref 就会失败）。
+- 主线提交（rebase 带进来的）不可改写；钩子点名它们时上报处理，不要重写主线历史。
 
 ## 标题
 
