@@ -1,6 +1,6 @@
 ---
 name: xingyun-reviewer
-description: "行云 MR 评审意见处理循环：拉评论 → 按改代码/提问/认可/CI/格式/无关分类 → 要改代码的先自测再在容器内提交并重压推送 → 回复优先合并成带 discussion ID 的总览。含自测三规则（零残留、功能测试、干净环境）、✅已修复/💡说明/🤔有不同看法模板、别人的 MR 不碰与 CI 非自身引起先问用户等边界。触发词：处理评审意见、回复 reviewer、盯这个 MR。"
+description: "行云 MR 评审意见处理循环：拉评论 → 按改代码/提问/认可/CI/格式/无关分类 → 要改代码的先自测再合规提交并重建串链推送 → 回复优先合并成带 discussion ID 的总览。含自测三规则（零残留、功能测试、干净环境）、✅已修复/💡说明/🤔有不同看法模板、别人的 MR 不碰与 CI 非自身引起先问用户等边界。触发词：处理评审意见、回复 reviewer、盯这个 MR。"
 ---
 
 # xingyun-reviewer（行云 MR 检视意见自动处理）
@@ -175,20 +175,19 @@ coding-cli mr note <MR> -R xLLM_AI/xllm -m "内容"
 # 1. 改代码
 # 2. 自测（见下面的清单）——必须通过才能继续
 # 3. 确认测试真的跑了（看退出码、看输出）
-# 4. 提交本轮修复（WIP 消息随意——马上压掉；见 xingyun-push skill）
+# 4. 提交本轮修复（新提交追加，保留演进；消息按 xingyun-push
+#    「提交信息格式」写合规——钩子会校验每个提交）
 docker exec <container> bash -c 'cd <your-home-dir>/xllm && \
   git add <files> && \
-  git commit -m "wip: review fix" && \
+  git commit -m "bugfix: address review comments on x." && \
   git log --oneline -1'  # MUST verify commit succeeded (hooks can fail silently)
 
-# 5. 压回单提交（推送单位 = 1 个合规提交，理由见 xingyun-push
-#    「提交组织与推送单位」；commit-tree 无换行，钩子陷阱一并绕开；
+# 5. 每个提交去尾换行重建（行云钩子拒绝正常 commit 的尾部换行，
+#    整链重建脚本见 xingyun-push「尾部换行陷阱与多提交推送」；
 #    reset --hard 前确认没有要保留的未提交改动）
 docker exec <container> bash -c 'cd <your-home-dir>/xllm && \
-  base=$(git merge-base HEAD coding/main) && \
-  tree=$(git rev-parse HEAD^{tree}) && \
-  new=$(printf "%s" "bugfix: describe the fix with four words minimum." | git commit-tree "$tree" -p "$base") && \
-  git reset --hard "$new" && git log --oneline -2'
+  python3 /tmp/rebuild-chain.py coding/main && \
+  git log --oneline -5'
 
 # 6. 推送（重写了分支历史 → 必须 force-with-lease）
 docker exec <container> bash -c 'cd <your-home-dir>/xllm && \

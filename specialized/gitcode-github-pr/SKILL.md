@@ -22,7 +22,7 @@ description: "gitcode.com 与 github.com 的 PR 操作：token 存放与调用�
 
 ## 分支风格与 PR 方向
 
-分支生命周期与推送单位见 `common/pr-mr-workflow`。这两个平台的差异只有三点：
+分支生命周期与提交组织见 `common/pr-mr-workflow`。这两个平台的差异只有三点：
 
 - remote 约定：`origin` = 自己的 fork，`upstream` = 上游仓库（没有就
   `git remote add upstream https://<host>/<上游owner>/<repo>.git`）。

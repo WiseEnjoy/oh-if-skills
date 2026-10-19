@@ -24,11 +24,11 @@ description: "行云仓推代码的平台特有规则：提交信息钩子正则
 
 ## 生命周期总纲
 
-分支生命周期（main 零提交 + `feat/<name>` + 合入后删分支）、推送单位 = 1 个压好的提交、
+分支生命周期（main 零提交 + `feat/<name>` + 合入后删分支）、提交组织（保留中间演进提交、逐个合规可推）、
 PR/MR 标题与三段式正文，三平台共用，**先读 `common/pr-mr-workflow`**。
 行云把那套流程里的 `<remote>` 换成 `coding` 即可，无需任何改写。
 
-本文件只讲行云独有的五处，其余不重复：提交信息钩子正则、尾部换行陷阱、
+本文件只讲行云独有的六处，其余不重复：提交信息钩子正则、尾部换行陷阱与多提交推送、
 coding 链路的 rebase/fetch 排障、子模块处置、coding-cli 与容器/宿主机 UID 互踩。
 
 ## 提交身份
@@ -57,36 +57,70 @@ user.email = <your-email>
 4. 句号之后不能有 `(#N)` 后缀（主线提交如 `... pool counts. (#168)` 通不过，
    也绝不要新引入这种写法）。
 
-## 尾部换行陷阱
+## 尾部换行陷阱与多提交推送
 
 Git 永远把消息存成 `"title\n"`，而钩子的正则是严格行尾 `$` 语义，于是**每一个正常创建的提交都会被拒**，
 报 `'<sha>' 中的提交信息不符合格式要求`，哪怕标题看着完全合规（实测：同一段文字去掉尾部换行就能过）。
 
-绕过办法就是通用流程里的 `git commit-tree`（见 `common/pr-mr-workflow`）——`printf '%s'` 不带换行喂进去即可，
-推送单位固定为 1 个提交时这一步天然把陷阱绕开，不需要额外动作。
+行云要推的**每一个提交**都必须用 `commit-tree` 重建（`printf '%s'` / `input=` 喂无换行消息）。
+保留中间演进提交的做法——整条分支一次性重建串链，PR 里就能看到实现、修复、验证的演进：
 
-确实要推多个提交时，对每个提交用 `commit-tree` 重建并串成链：保留原 `tree` 与 `author`/`committer`
-（`git log -1 --format=%an/%ae/%aD/%cn/%ce/%cD`），消息用 `rstrip('\n')` 去尾换行，
-前一个重建结果作为下一个的 `-p`，最后 `git push --force-with-lease coding <new-tip>:refs/heads/<branch>`。
-成本是 N 次重建，所以默认别这么干。
+```bash
+# 先同步主干，冲突只解一次；重建前 git status 确认没有要保留的未提交改动
+# （未跟踪文件与子模块漂移不受 reset 影响）
+git fetch coding main && git rebase coding/main
+base=$(git merge-base HEAD coding/main)
+python3 - "$base" <<'EOF'
+import subprocess, sys
+base = sys.argv[1]
+fmt = '%H%x00%T%x00%an%x00%ae%x00%aD%x00%cn%x00%ce%x00%cD%x00%B%x01'
+log = subprocess.run(['git','log','--reverse',f'{base}..HEAD','--format='+fmt],
+                     capture_output=True, text=True).stdout
+parent = base
+for rec in log.split('\x01'):
+    rec = rec.strip('\n')          # git 在每条记录后追加换行，必须去掉
+    if not rec:
+        continue
+    sha, tree, an, ae, ad, cn, ce, cd, msg = rec.split('\x00')
+    msg = msg.rstrip('\n')
+    env = {'GIT_AUTHOR_NAME':an,'GIT_AUTHOR_EMAIL':ae,'GIT_AUTHOR_DATE':ad,
+           'GIT_COMMITTER_NAME':cn,'GIT_COMMITTER_EMAIL':ce,'GIT_COMMITTER_DATE':cd}
+    new = subprocess.run(['git','commit-tree',tree,'-p',parent],
+                         input=msg, capture_output=True, text=True, env=env).stdout.strip()
+    print(f'{sha} -> {new}  {msg.splitlines()[0]}')
+    parent = new
+subprocess.run(['git','reset','--hard',parent])
+EOF
+git push --force-with-lease coding feat/<name>
+```
 
-推送前本地预检（正则与钩子一致）：
+- 重建成本 O(N)，但一次性脚本跑一遍即完，不构成"压回 1 个提交"的理由。
+- 用户明确要求单提交时退化为一次 `commit-tree`（见 `common/pr-mr-workflow`）。
+
+推送前本地预检（正则与钩子一致，对分支上每个提交跑）：
 
 ```python
 import re, subprocess
 pat = re.compile(r'^(feat|bugfix|docs|test|refactor|chore|style|revert|perf|model|build|skills): (\S+ ){3,}\S+\.$')
-full = subprocess.run(['git','log','-1','--format=%B',sha],capture_output=True,text=True).stdout.rstrip('\n')
-assert pat.match(full)
+base = 'coding/main'   # 或 merge-base
+log = subprocess.run(['git','log','--reverse',f'{base}..HEAD','--format=%H%x01%B%x02'],
+                     capture_output=True, text=True).stdout.rstrip('\x02')
+for rec in log.split('\x02'):
+    sha, full = rec.split('\x01', 1)
+    assert pat.match(full.rstrip('\n')), f'{sha} 消息不合规: {full!r}'
 ```
 
-## 行云为什么把推送单位固定为 1 个提交
+## 提交组织（行云的附加约束）
 
-通用理由见 `common/pr-mr-workflow`；行云的额外成本差异有两条：
+通用规则见 `common/pr-mr-workflow`（保留中间演进提交、推送前 rebase + force-with-lease）。
+行云的额外成本差异：
 
-- 钩子校验**推送载荷里的每一个提交**（正则 + 无换行）：推 N 个提交 = N 次 commit-tree 重建，推 1 个只需一次。
-- squash 落到主干的消息由平台生成（实测带 `(#N)` 后缀），单提交让落库内容完全可控。
+- 钩子校验**推送载荷里的每一个提交**（正则 + 无换行）：每个提交都要过一次 commit-tree 重建——
+  这是"为什么正常 commit 会被拒"的机制说明，不是"要压回 1 个提交"的理由。
+- squash 落到主干的消息由平台生成（实测带 `(#N)` 后缀），分支上保留几个提交不影响落库结果；
+  想让评审人分步看演进，就直接保留多个合规提交。
 
-评审轮次每轮重压回 1 个提交最省。确需让评审人分步看多个提交时，用下节的重建循环逐个改写，只是更贵。
+评审轮次的新修复照常追加新提交，重建 + 推送即可。
 
 ## rebase 到行云 main（= 总纲④的第三行；长周期分支定期同步同此）
 
@@ -141,9 +175,8 @@ git push --force-with-lease coding <branch>
 
 ## stash 变体（子模块漂移要留在工作区时）
 
-通用压提交流程用 WIP 提交收口。若子模块 gitlink 漂移想留在工作区、不进提交，
-把收口那一步换成 `git stash push -m "wip"` → `git fetch` → `git rebase` → `git stash pop`，
-其余步骤不变。注意 `git stash` 能收下 gitlink 漂移，而 `git stash push -- <path>` 收不下。
+推送前 rebase 时若有不想收进提交的改动（如子模块 gitlink 漂移想留在工作区），
+用 stash 暂存：`git stash push -m "wip"` → `git rebase` → `git stash pop`，其余照常。注意 `git stash` 能收下 gitlink 漂移，而 `git stash push -- <path>` 收不下。
 
 ## PR/MR 标题与描述
 

@@ -72,9 +72,9 @@ git apply /tmp/local-delta.patch
 ## 安全边界与坑
 
 - `git cherry` / patch-id 对 squash 合入**无效**（全部显示 `+`），别在这上面花时间
-- 推送单位=单提交（xingyun-push）只在**主干没动你碰过的文件**时让 patch-id
-  匹配上（`git cherry` 标 `-`、`git pull --rebase` 自动跳过）；主干动过照样失效——
-  判定流程照走，reset 仍是终点
+- 无论分支上是 1 个还是多个提交，squash 合入后 patch-id 都对不上（主干是最终稿一个
+  提交，分支是演进系列）——`git cherry` 全显示 `+`、`git pull --rebase` 全部重放，
+  别在这上面花时间；判定流程照走，reset 仍是终点
 - `git reset --hard` 不动未跟踪文件、不动子模块工作区（漂移原样保留），只重置已跟踪内容
 - reset 前必须建 backup 分支；丢弃的提交随时可从 backup 找回
 - `git stash` 收不下"子模块内部脏"（状态里的小写 m，会报 no local changes）——
