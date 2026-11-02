@@ -1,0 +1,4 @@
+interface:
+  display_name: "JoySpace 表格插图"
+  short_description: "把文本渲染成 PNG 贴进 JoySpace 表格单元格"
+  default_prompt: "Use $joyspace-sheet-image to render the bench log as a PNG and insert it into the target JoySpace sheet cell."
