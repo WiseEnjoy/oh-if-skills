@@ -5,8 +5,20 @@ from real production experience.
 
 ## Skills
 
-Two-level layout: `skills/<category>/<name>/SKILL.md`. OpenCode discovers
-nested directories recursively, so copy the category folder too.
+Two-level layout: `skills/<category>/<name>/SKILL.md`.
+
+Install by symlinking this clone into each agent's skills directory — never by
+copying, so there is only ever one copy of each skill:
+
+- **OpenCode / JoyCode / Codex** discover nested directories recursively, so a
+  per-category symlink is enough (`<skills-dir>/<category>` -> `<clone>/<category>`);
+  new skills show up automatically.
+- **Claude Code only discovers one level deep**, so each skill needs its own
+  symlink (`~/.claude/skills/<name>` -> `<clone>/<category>/<name>`); a new skill
+  in this repo is invisible until it is linked.
+
+`specialized/opencode-skills-sync/sync-links.sh` does both idempotently — run it
+after adding or removing a skill.
 
 ### meta/ — meta-paradigms (always in effect, not on-demand)
 
@@ -35,6 +47,9 @@ nested directories recursively, so copy the category folder too.
 | [opencode-skills-sync](specialized/opencode-skills-sync/) | Sync skills to this repo: YAML frontmatter validation + sanitization rules |
 | [xllm-npu-deps-bundle](specialized/xllm-npu-deps-bundle/) | Build the unified xLLM NPU deps bundle (`xllm-deps-*.run`): compile the operator run packages and wheels declared in the bundled `npu_docker_depends.yaml`, assemble and verify the self-extracting bundle |
 | [sync-after-squash-merge](specialized/sync-after-squash-merge/) | Re-sync a local branch after its MR was squash-merged into main (never pull/rebase/replay) |
+| [joyspace-sheet-write](specialized/joyspace-sheet-write/) | Batch-write cells into a JoySpace (WPS-embedded) sheet via the in-page `APP.createRange().setValue2()` API, with verify-retry to survive command-queue drops |
+| [joyspace-bench-table](specialized/joyspace-bench-table/) | Fill a JoySpace sheet with **real raw vbench results** end-to-end: mean-TTFT<SLA record selection (aligned with ai/jd_model_bench), mechanical payload/JS generation, row-label assertions, and raw bench_stdout.log screenshots — zero manual transcription |
+| [daily](specialized/daily/) | Generate the two nightly LLM inference HTML reports (radar + foundations) with a 10-minute hard budget, parallel acquisition, and a `--fast` preset |
 
 ## What is a "skill"?
 
