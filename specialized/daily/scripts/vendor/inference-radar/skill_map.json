@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "purpose": "Skill coverage map for the LLM inference tuning practice. Curators tag each report item and deep-report section with skill_tag values from this tree; monthly aggregation turns the tags into a coverage heatmap that drives deep-study scheduling.",
+  "domains": [
+    {
+      "tag": "kv-cache",
+      "name": "KV cache 管理",
+      "description": "布局、paging、反量化、offload、消失/淘汰策略",
+      "skills": ["layout", "paged", "dequant", "offload", "eviction"]
+    },
+    {
+      "tag": "quantization",
+      "name": "量化",
+      "description": "低比特格式、scale 粒度、量化位置与图兼容性",
+      "skills": ["mxfp", "w4a8", "w8a8", "kv-quant", "scale-granularity", "accuracy-regression"]
+    },
+    {
+      "tag": "attention-kernel",
+      "name": "Attention kernel",
+      "description": "FA 变体、MLA、变长、graph capture 下的 attention 路径",
+      "skills": ["flash-attention", "mla", "varlen", "graph-capture", "fusion"]
+    },
+    {
+      "tag": "moe",
+      "name": "MoE",
+      "description": "routing、grouped GEMM、EP 通信、expert 显存",
+      "skills": ["routing", "grouped-gemm", "ep-communication", "expert-memory"]
+    },
+    {
+      "tag": "communication",
+      "name": "通信与分布式",
+      "description": "HCCL/HCOMM 调优、overlap、拓扑、多机故障定位",
+      "skills": ["collective-tuning", "overlap", "topology", "fault-diagnosis"]
+    },
+    {
+      "tag": "graph-execution",
+      "name": "图执行",
+      "description": "capture/replay 语义、标量输入刷新、异常清理、编译",
+      "skills": ["capture-replay", "scalar-input", "exception-cleanup", "compilation"]
+    },
+    {
+      "tag": "serving-scheduler",
+      "name": "调度与 serving",
+      "description": "continuous batching、P-D 分离、SLO、吞吐/延迟权衡",
+      "skills": ["continuous-batching", "pd-disaggregation", "slo-tuning", "throughput-latency"]
+    },
+    {
+      "tag": "profiling",
+      "name": "profiling 与瓶颈定位",
+      "description": "msprof、torch profiler、瓶颈定位方法论、指标基线",
+      "skills": ["tooling", "methodology", "metric-baselines"]
+    }
+  ]
+}
