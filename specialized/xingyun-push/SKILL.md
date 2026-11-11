@@ -1,6 +1,6 @@
 ---
 name: xingyun-push
-description: "行云仓推代码的平台特有规则：提交信息钩子正则（fix: 会被拒，必须 bugfix:；≥4 词 + 句号；只要标题不要正文）、尾部换行陷阱与 commit-tree 绕法、coding 链路 fetch/rebase 排障表、子模块 gitlink 逐案处置、coding-cli 调用方式（command -v 判定，别硬编码路径）与容器/宿主机 UID 互踩。分支生命周期与 PR 正文规范见 common/pr-mr-workflow。触发词：推行云、rebase、同步主干、提交被钩子拒绝、创建 MR。"
+description: "行云仓推代码的平台特有规则：提交信息钩子正则（fix: 会被拒，必须 bugfix:；≥4 词 + 句号；只要标题不要正文）、尾部换行陷阱与 commit-tree 绕法、coding 链路 fetch/rebase 排障表、子模块 gitlink 逐案处置、coding-cli 调用方式（command -v 判定，别硬编码路径）与容器/宿主机 UID 互踩。分支生命周期与 PR 正文规范见 specialized/pr-mr-workflow。触发词：推行云、rebase、同步主干、提交被钩子拒绝、创建 MR。"
 ---
 
 # 行云推送（xingyun-push）：rebase / 提交 / 推送规范
@@ -25,7 +25,7 @@ description: "行云仓推代码的平台特有规则：提交信息钩子正则
 ## 生命周期总纲
 
 分支生命周期（main 零提交 + `feat/<name>` + 合入后删分支）、提交组织（保留中间演进提交、逐个合规可推）、
-PR/MR 标题与三段式正文，三平台共用，**先读 `common/pr-mr-workflow`**。
+PR/MR 标题与三段式正文，三平台共用，**先读 `specialized/pr-mr-workflow`**。
 行云把那套流程里的 `<remote>` 换成 `coding` 即可，无需任何改写。
 
 本文件只讲行云独有的六处，其余不重复：提交信息钩子正则、尾部换行陷阱与多提交推送、
@@ -96,7 +96,7 @@ git push --force-with-lease coding feat/<name>
 ```
 
 - 重建成本 O(N)，但一次性脚本跑一遍即完，不构成"压回 1 个提交"的理由。
-- 用户明确要求单提交时退化为一次 `commit-tree`（见 `common/pr-mr-workflow`）。
+- 用户明确要求单提交时退化为一次 `commit-tree`（见 `specialized/pr-mr-workflow`）。
 
 推送前本地预检（正则与钩子一致，对分支上每个提交跑）：
 
@@ -113,7 +113,7 @@ for rec in log.split('\x02'):
 
 ## 提交组织（行云的附加约束）
 
-通用规则见 `common/pr-mr-workflow`（保留中间演进提交、推送前 rebase + force-with-lease）。
+通用规则见 `specialized/pr-mr-workflow`（保留中间演进提交、推送前 rebase + force-with-lease）。
 行云的额外成本差异：
 
 - 钩子校验**推送载荷里的每一个提交**（正则 + 无换行）：每个提交都要过一次 commit-tree 重建——
@@ -181,7 +181,7 @@ git push --force-with-lease coding <branch>
 
 ## PR/MR 标题与描述
 
-见 `common/pr-mr-workflow`（含行云 2000 字描述上限的处置）。提交信息另按本文件「提交信息格式」执行，两者互不影响。
+见 `specialized/pr-mr-workflow`（含行云 2000 字描述上限的处置）。提交信息另按本文件「提交信息格式」执行，两者互不影响。
 
 ## coding-cli 常用命令（行云 PR/MR 操作）
 
@@ -201,7 +201,7 @@ coding-cli mr create \
   --source-branch feat/xxx \
   --base main \
   --title "feat: xxx yyy zzz www." \
-  -b "$(cat body.md)"   `# 正文按 common/pr-mr-workflow 的三段式起草后落盘再引用` \
+  -b "$(cat body.md)"   `# 正文按 specialized/pr-mr-workflow 的三段式起草后落盘再引用` \
   -R xLLM_AI/xllm
 
 # 更新 MR（改标题/描述/评审人）

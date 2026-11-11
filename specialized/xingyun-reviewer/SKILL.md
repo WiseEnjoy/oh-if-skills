@@ -204,12 +204,12 @@ coding-cli mr note <MR> -R xLLM_AI/xllm -m "回复内容"
 ## 自测
 
 自测纪律（零残留 / 功能测试 / 干净环境 + 各类文件的最低自测要求）是跨任务通用规则，
-见 `common/safe-ops-rules`「规则 4」。**行云的附加约束**：没有通过自测的修复不许提交，
+见 `specialized/safe-ops-rules`「规则 4」。**行云的附加约束**：没有通过自测的修复不许提交，
 测不了就说明原因并问用户。
 
 ## 监控（会话内轮询）
 
-会话存续期间用一个脱离进程组的后台轮询（写法见 `common/long-running-commands`），
+会话存续期间用一个脱离进程组的后台轮询（写法见 `specialized/long-running-commands`），
 每 30-60 秒拉一次 discussions，把新评论追加到日志；**每收到一条用户消息先看一次该日志**，
 有新评论立刻走"分类 → 修复 → 自测 → 推送 → 回复"。
 

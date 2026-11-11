@@ -1,6 +1,6 @@
 ---
 name: gitcode-github-pr
-description: "gitcode.com 与 github.com 的 PR 操作：token 存放与调用（不进 URL、不进日志，且不是 git 操作的默认前提）、fork 跨仓库 head/base 方向、gh CLI 用法，以及 clone/push 失败后的排障——连通性与代理绕行（去代理直连、临时 GIT_CONFIG_GLOBAL 绕 gh-proxy 改写、坏 IP 的 DNS 处置）属于特定内网环境的实测结论，默认先按常规方式推，失败了再判断是否适用。分支生命周期与 PR 标题正文规范见 common/pr-mr-workflow。触发词：发起PR、建PR、提PR、查看PR、合并请求。"
+description: "gitcode.com 与 github.com 的 PR 操作：token 存放与调用（不进 URL、不进日志，且不是 git 操作的默认前提）、fork 跨仓库 head/base 方向、gh CLI 用法，以及 clone/push 失败后的排障——连通性与代理绕行（去代理直连、临时 GIT_CONFIG_GLOBAL 绕 gh-proxy 改写、坏 IP 的 DNS 处置）属于特定内网环境的实测结论，默认先按常规方式推，失败了再判断是否适用。分支生命周期与 PR 标题正文规范见 specialized/pr-mr-workflow。触发词：发起PR、建PR、提PR、查看PR、合并请求。"
 ---
 
 # gitcode-github-pr（gitcode / github PR 操作）
@@ -22,7 +22,7 @@ description: "gitcode.com 与 github.com 的 PR 操作：token 存放与调用�
 
 ## 分支风格与 PR 方向
 
-分支生命周期与提交组织见 `common/pr-mr-workflow`。这两个平台的差异只有三点：
+分支生命周期与提交组织见 `specialized/pr-mr-workflow`。这两个平台的差异只有三点：
 
 - remote 约定：`origin` = 自己的 fork，`upstream` = 上游仓库（没有就
   `git remote add upstream https://<host>/<上游owner>/<repo>.git`）。
@@ -60,7 +60,7 @@ curl -s -X POST "https://api.gitcode.com/api/v5/repos/<owner>/<repo>/pulls" \
 
 ### PR 标题与描述
 
-见 `common/pr-mr-workflow`（标题、三段式正文、格式规范、创建纪律四项三平台通用）。
+见 `specialized/pr-mr-workflow`（标题、三段式正文、格式规范、创建纪律四项三平台通用）。
 生成 body 后贴给用户确认再提交。
 
 ### 查询 / 评论 / 合并

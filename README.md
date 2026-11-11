@@ -8,13 +8,15 @@ shaped it.
 
 ```bash
 git clone https://github.com/WiseEnjoy/oh-if-skills.git ~/git/oh-if-skills
-bash ~/git/oh-if-skills/install-links.sh
+bash ~/git/oh-if-skills/install.sh
 ```
 
-`install-links.sh` symlinks this clone into each agent's skills directory, so
-every agent reads the same working copy and a `git pull` takes effect
-everywhere on the next session. It is idempotent — **re-run it after adding or
-removing a skill**, and it will also prune links whose target is gone.
+`install.sh` checks dependencies, validates every skill against the contract
+below, then symlinks this clone into each agent's skills directory, so every
+agent reads the same working copy and a `git pull` takes effect everywhere on
+the next session. It is idempotent — **re-run it after adding, removing or
+editing a skill**; it also prunes links whose target is gone and exits non-zero
+if any skill fails validation.
 
 Two link shapes, because the agents differ in how they discover skills:
 
@@ -39,16 +41,7 @@ it once before first use; it exits immediately when nothing is missing.
 | [user-communication](meta/user-communication/) | The rules every outward message must pass: chat replies, PR/MR bodies, review replies, errors, summaries |
 | [self-evolution](meta/self-evolution/) | How skills are created, maintained and rewritten: no repeated mistakes, general rules over volatile details, stay lean |
 
-### common/ — disciplines that apply to any task
-
-| Name | What it does |
-| --- | --- |
-| [safe-ops-rules](common/safe-ops-rules/) | Checks before destructive operations (`rm`, `kill`, revert, re-run) and the self-test bar before committing |
-| [long-running-commands](common/long-running-commands/) | Start builds, tests and downloads detached so a tool timeout cannot kill the process group |
-| [pr-mr-workflow](common/pr-mr-workflow/) | Single source of truth for branch lifecycle and PR/MR conventions across all three platforms |
-| [xllm-build](common/xllm-build/) | Build xLLM safely: busy binaries, intentional submodule drift, detached builds, state restoration |
-
-### specialized/ — bound to one platform or tool
+### specialized/ — all on-demand skills (shared disciplines and platform-bound)
 
 | Name | What it does |
 | --- | --- |
@@ -57,12 +50,15 @@ it once before first use; it exits immediately when nothing is missing.
 | [xingyun-reviewer](specialized/xingyun-reviewer/) | Work through MR review comments: classify, fix, self-test, reply |
 | [sync-after-squash-merge](specialized/sync-after-squash-merge/) | Re-sync a local branch after its MR was squash-merged (never pull/rebase/replay) |
 | [ssh-password-transfer](specialized/ssh-password-transfer/) | Copy files to or from a remote host that only allows password auth |
-| [opencode-skills-sync](specialized/opencode-skills-sync/) | Maintain and publish this repo: install model, skill contract, frontmatter validator, sanitization |
 | [xllm-npu-deps-bundle](specialized/xllm-npu-deps-bundle/) | Build and verify the unified xLLM NPU dependency bundle (`xllm-deps-*.run`) |
 | [joyspace-sheet-write](specialized/joyspace-sheet-write/) | Batch-write cells into a JoySpace (WPS-embedded) sheet, with verify-retry against dropped writes |
 | [joyspace-sheet-image](specialized/joyspace-sheet-image/) | Insert a rendered PNG into a JoySpace sheet cell (lands as a `DISPIMG` formula) |
 | [joyspace-bench-table](specialized/joyspace-bench-table/) | Fill a JoySpace sheet with raw vbench results — mechanical, zero manual transcription |
 | [daily](specialized/daily/) | Generate the two nightly LLM inference HTML reports under a 10-minute budget |
+| [pr-mr-workflow](specialized/pr-mr-workflow/) | Single source of truth for branch lifecycle and PR/MR conventions across all three platforms |
+| [safe-ops-rules](specialized/safe-ops-rules/) | Checks before destructive operations (`rm`, `kill`, revert, re-run) and the self-test bar before committing |
+| [long-running-commands](specialized/long-running-commands/) | Start builds, tests and downloads detached so a tool timeout cannot kill the process group |
+| [xllm-build](specialized/xllm-build/) | Build xLLM safely: busy binaries, intentional submodule drift, detached builds, state restoration |
 
 ## Layout and skill contract
 
@@ -88,8 +84,11 @@ Every skill must satisfy all four:
 4. **Output-paradigm block** `## 输出范式（所有技能统一）` pointing back to
    `meta/user-communication` (every skill except that one).
 
-Validator script: see section 2 of
-[opencode-skills-sync](specialized/opencode-skills-sync/).
+Run `bash install.sh` — it validates every skill against the four contract
+items before linking and exits non-zero on any failure. When fixing
+frontmatter, edit only between the `---` markers; re-emit the description as
+`description: ` + `json.dumps(text, ensure_ascii=False)` (a JSON string is
+valid YAML).
 
 ## Contributing
 
@@ -99,5 +98,24 @@ PRs welcome. Beyond the four contract items:
 - Document the real failure cases and how to recover, not just the happy path.
 - Mark environment-specific findings as such (which machine, which date); never
   state them as universal truths.
-- No credentials, internal IPs or personal paths — see the sanitization table in
-  [opencode-skills-sync](specialized/opencode-skills-sync/).
+- No credentials, internal IPs or personal paths. Before publishing, scrub
+  local-only content and run this scan on your staged diff (0 hits required):
+
+  ```bash
+  git diff --cached | grep -E '^\+' | grep -vE '^\+\+\+' \
+    | grep -E '/Users/[a-z]|/home/[a-z]|\b(10|11)\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\b|\b[0-9a-f]{32,}\b' \
+    || echo clean
+  ```
+
+  Replace local-only content with placeholders: internal IPs → `<internal-ip>`,
+  real usernames → `<your-username>`, real names/emails → `<your-name>` /
+  `<your-email>`, UIDs → `<your-uid>`, real repo/home paths → `<your-repo>` /
+  `<your-home-dir>`. Domain and host names stay as-is (internal naming only).
+
+## Publishing
+
+This repo is published by pushing `main` (no separate public copy). Flow:
+`bash install.sh` (green) → scrub the diff with the scan above → commit →
+`git push origin main` → verify `git ls-remote origin refs/heads/main` equals
+`git rev-parse main`. If the push fails, follow the connectivity workarounds in
+[gitcode-github-pr](specialized/gitcode-github-pr/SKILL.md).

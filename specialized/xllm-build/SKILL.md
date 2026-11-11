@@ -40,7 +40,7 @@ description: "构建 xLLM（本机或远端）前必须使用的通用流程：�
    ```
    不使用 path-specific stash、`git submodule update`、reset 或 checkout 改写子模块；
    不顺手 stage 产品代码。若指针升级属于功能本身，则正常提交指针，不走该绕过。
-4. **长构建必须脱离会话**。预计超过 2 分钟时按 `common/long-running-commands`
+4. **长构建必须脱离会话**。预计超过 2 分钟时按 `specialized/long-running-commands`
    用 `setsid` 启动，输出写入稳定日志；用短调用轮询，不在一次工具调用里阻塞。
 5. **结束前恢复现场并复核**。确认构建退出码与日志中的最终状态，gitlink 已从
    暂存区移除；`git status` 只允许出现构建前已有改动、未跟踪产物或明确预期的
