@@ -1,6 +1,6 @@
 ---
 name: opencode-skills-sync
-description: "维护并发布本技能仓：软链接安装模型（三个 agent 的技能目录直接链到仓库克隆，改仓库即生效，不存在本地版与公共版两份）、技能目录契约（name 等于目录名、依赖段 + install.sh、输出范式块、单一权威来源）、YAML frontmatter 硬规则与校验脚本（description 必须整体加双引号，否则 GitHub 报 mapping values are not allowed here）、发布前脱敏扫描与故障速查。触发词：同步技能、推 skills、SKILL.md 报 yaml 语法错误、修 frontmatter、新增技能。"
+description: "维护并发布本技能仓：软链接安装模型（各 agent 技能目录直链仓库克隆，改仓库即生效，不存在本地版与公共版两份；opencode/joycode/codex 挂分类级，Claude Code 只认一级目录必须逐技能挂，用 sync-links.sh 幂等补链）、技能目录契约（name 等于目录名、依赖段 + install.sh、输出范式块、单一权威来源）、YAML frontmatter 硬规则与校验脚本（description 必须整体加双引号，否则 GitHub 报 mapping values are not allowed here）、发布前脱敏扫描与故障速查。触发词：同步技能、推 skills、SKILL.md 报 yaml 语法错误、修 frontmatter、新增技能。"
 ---
 
 # opencode-skills-sync（opencode 全局技能同步 + YAML frontmatter 校验）
@@ -86,15 +86,17 @@ done
 
 | 本地有什么 | 公共仓占位符 |
 | --- | --- |
-| 内网域名：`coding.<内网域名>`、其它公司域名 | `coding<internal-domain>` |
+| 内网域名 / 内网主机名（含 `coding.*`、业务域名、ProxyCommand 里的代理 host） | **保留原样，不属敏感信息**（2026-11-11 用户拍板） |
 | 内网网段 IP（形如 `11.x.x.x`、`10.x.x.x`） | `<internal-host>` |
 | 真实登录名（`ext.<name>`、裸用户名） | `<your-username>` |
 | 真实姓名 / 邮箱（commit 的 name、email） | `<your-name>` / `<your-email>` |
 | 宿主机共享挂载 UID（`chown`/`chgrp` 里的数字） | `<your-uid>` |
 | 真实仓库 / 家目录路径（宿主共享挂载的家目录，形如 `/home/<user>/...`） | `<your-xllm-repo>` / `<your-home-dir>` |
-| 内网代理主机名（ProxyCommand 里那个 host） | `<internal-proxy-host>` |
 
-**本地私有字面量清单**：`~/.config/opencode/leak-scan.txt`（**不发布到公共仓**）——
+**边界**：不脱敏的只有**域名与主机名**；**IP、真实用户名/姓名/邮箱、UID、真实家目录路径
+照旧必须换占位符**——那些是能定位到具体人和机器的信息，域名只是公司内部命名。
+
+**本地私有字面量清单**：`~/.config/opencode/leak-scan.txt`（**不发布到公共仓**，本机当前缺失）——
 内网域名、内网 IP 网段、真实用户名、UID、真实路径的逐字面量替换对照和发布前 grep 扫描命令。
 逐文件脱敏时照它替换；公共仓只保留上面这张通用表。
 
@@ -103,11 +105,28 @@ done
 
 ## 四、同步流程
 
-**当前安装模型（2026-10-17 起）**：本机三个 agent 的技能目录都是**软链接**，直接指向本仓库克隆
-（`~/.joycode/skills/<name>`、`~/.claude/skills/<name>` 为逐技能软链接；
-`~/.config/opencode/skills/<分类>` 为分类软链接）。所以：
+**当前安装模型**：各 agent 的技能目录都是**软链接**，直接指向本仓库克隆。
+挂法不能统一，取决于该 agent 的发现能力——**这是平台事实，不是偷懒**：
 
-- 编辑技能 = 直接改仓库工作区文件，三个 agent 下一轮即生效，**不存在"本地版 vs 公共仓版"两份内容**。
+| agent | 技能目录 | 挂法 | 新技能进仓后 |
+| --- | --- | --- | --- |
+| opencode | `~/.config/opencode/skills/<分类>` | 分类级 | 自动可见 |
+| joycode | `~/.joycode/skills/<分类>` | 分类级 | 自动可见 |
+| codex | `~/.codex/skills/<分类>` | 分类级 | 自动可见（递归发现待实测） |
+| Claude Code | `~/.claude/skills/<name>` | **逐技能** | **不可见，必须补链** |
+
+**Claude Code 只发现技能目录下一级的 SKILL.md**（2026-11-11 实测：平铺探针
+`~/.claude/skills/<name>/SKILL.md` 立即出现在技能列表，嵌套探针
+`~/.claude/skills/<分类>/<name>/SKILL.md` 始终不出现）。所以分类级软链接在 Claude Code 侧
+**不成立**，别再试着统一成分类级。
+
+**补链不靠人记**：`bash <本skill目录>/sync-links.sh`。幂等，可随时重跑——
+挂全部分类级链接、为每个技能补 Claude Code 侧逐技能链接、清理指向本仓的悬空链接，
+并跳过非本仓的真实目录（不覆盖别处安装的同名技能）。**新增或删除技能后跑一次即可。**
+
+所以：
+
+- 编辑技能 = 直接改仓库工作区文件，各 agent 下一轮即生效，**不存在"本地版 vs 公共仓版"两份内容**。
 - 发布 = 在本仓库提交并 push，不再需要逐文件 diff 搬运。
 - **脱敏仍然强制**：新写入的内容里凡是内网域名、内网 IP、真实用户名/姓名/邮箱、UID、
   真实家目录路径，一律按第三节替换成占位符；提交前跑一次扫描，0 命中才能 push。
@@ -115,6 +134,7 @@ done
 流程：
 
 1. 改完跑第二节的 YAML 校验脚本，全部技能 OK。
+1. 新增/删除技能的话，跑 `bash <本skill目录>/sync-links.sh` 补链（幂等）。
 2. 跑脱敏扫描（照 `~/.config/opencode/leak-scan.txt` 的字面量清单 grep），0 命中。
 3. 提交信息用 `type: 小写描述.`（≥4 词、句号结尾）。
 4. push 按 `gitcode-github-pr` skill 的 GitHub 规则（**去代理直连 + 临时 GIT_CONFIG_GLOBAL + extraHeader**）。
@@ -130,3 +150,4 @@ done
 | `Connection to ssh.github.com closed by remote host` | 本机 SSH 到 GitHub 不可用 | 别修了，直接走 HTTPS（见 gitcode-github-pr skill 的连通性表） |
 | push/clone 报 `Failed to connect to github.com port 443` | DNS 解析到不可达 IP（`github.com` 的 A 记录抖动） | `curl --resolve github.com:443:140.82.112.3` 探活，可用就临时写 `/etc/hosts`，push 完删掉 |
 | 覆盖公共仓后出现内网信息 | 直接 cp 本地文件 | 立刻 revert，按第三节重新脱敏后再发 |
+| 新技能在 Claude Code 里不出现（其他 agent 正常） | Claude Code 只认一级目录，没补逐技能链接 | 跑 `sync-links.sh` |
