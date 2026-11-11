@@ -28,8 +28,8 @@ JoySpace 表格在浏览器里是 WPS 嵌入式表格，没有公开的单元格
 | 插图（唯一正解） | `APP.getUilCmdTool().insertCellPictureFromApi(File, null)` | 写入**当前选区**，一步完成上传+嵌入，返回 Promise |
 | 渲染 PNG | `canvas.toBlob('image/png')` → `new File([blob], 'x.png', {type:'image/png'})` | 不依赖系统截图 |
 
-row/col 都是 1-based 整数（A=1，AA=27，AI=35；第 1 行 row=1）。例如 AI4 = `{row:4, col:35}`。
-列号换算：`col = (字母部分当 26 进制)`，AA=27、AB=28…；程序里用 `let n=0; for(c of s) n=n*26+(c.charCodeAt(0)-64)`。
+row/col 都是 **0-based** 整数（A=0，X=23，AI=34；第 1 行 row=0），与 `joyspace-sheet-write` 技能一致。例如 AI4（第 4 行 AI 列）= `{row:3, col:34}`。
+列号换算（0-based）：`col = (字母部分当 26 进制) - 1`，A=0、Z=25、AA=26、AB=27…；程序里用 `let n=0; for(c of s) n=n*26+(c.charCodeAt(0)-64); n -= 1;`。
 
 ## 第一步：取要贴的文本
 
@@ -45,13 +45,13 @@ JS 里用模板字符串或 `JSON.stringify` 转义，避免引号/换行把代�
 
 ```js
 (async function () {
-  const ROW = 4, COL = 35;                 // 目标单元格（AI4 = row4 col35）
+  const ROW = 3, COL = 34;                 // 目标单元格（AI4 = 0-based row3 col34）
   const TEXT = `替换为要渲染的文本`;      // 反引号里的 \n 会转成换行
   const NAME = `r${ROW}c${COL}.png`;
 
   // 1) 定位选区到目标单元格
   const sv = APP.getActiveSheetView();
-  sv.setSelectionRange([{ row: ROW, col: COL }], { row: ROW, col: COL });
+  sv.setSelectionRange([{ rowFrom: ROW, rowTo: ROW, colFrom: COL, colTo: COL }], { row: ROW, col: COL });
 
   // 2) Canvas 渲染：等宽字体 + 深色底，适合贴日志/代码
   const lines = String(TEXT).replace(/\r/g, '').split('\n');
@@ -86,9 +86,9 @@ JS 里用模板字符串或 `JSON.stringify` 转义，避免引号/换行把代�
 
 ```js
 (function () {
-  const ROW = 4, COL = 35, TEXT = '纯文本内容';
+  const ROW = 3, COL = 34, TEXT = '纯文本内容';   // 0-based，AI4 = row3 col34
   const sv = APP.getActiveSheetView();
-  sv.setSelectionRange([{ row: ROW, col: COL }], { row: ROW, col: COL });
+  sv.setSelectionRange([{ rowFrom: ROW, rowTo: ROW, colFrom: COL, colTo: COL }], { row: ROW, col: COL });
   sv.getSelectionRange().setValue2(TEXT);
   return 'wrote r' + ROW + 'c' + COL;
 })()
@@ -110,6 +110,10 @@ JS 里用模板字符串或 `JSON.stringify` 转义，避免引号/换行把代�
 | 插图成功但单元格公式被覆盖丢失原值 | `=DISPIMG` 公式会替换单元格原值 | 插图前先 `APP.getCell(row,col).getValue()`，非空与用户确认 |
 | `canvas.toBlob returned null` | 极少数环境 toBlob 不可用 | 退 `canvas.toDataURL('image/png')` → `fetch(dataURL).blob()` |
 | 插入后表格里看不到图、公式在 | 图片异步上传未完成就关页 | 插入后等 Promise resolve 再操作，并在表格里肉眼/再读确认一次 |
+| 图插到了目标格的右下一格（行、列都 +1） | 按本技能旧文档的 1-based 传参，而 WPS `APP` 实际是 0-based | row/col 一律 0-based（A=0，第 1 行 row=0），与 `joyspace-sheet-write` 技能一致 |
+| `insertCellPictureFromApi` 正常 resolve 但单元格仍是空 | `setSelectionRange([{row, col}])` 数组元素字段名错误，选区没定位上，插图静默落空 | 数组元素必须用 `{rowFrom, rowTo, colFrom, colTo}`（第二个定位参数仍用 `{row, col}`） |
+| 插图后 `getValue()`/`getFormula()` 读不到 DISPIMG 公式（返回 undefined 或懒加载对象） | 图片格在部分 WPS 会话里懒加载，值不可直读 | 用 `APP.getCell(r,c).isEmpty()` 判断是否落库（false=成功）；MCP `read_joyspace` 对图片列也显示为空，不能作为图片验证依据 |
+| 误插图要清除 | DISPIMG 公式格可被空值覆盖 | `ws.createRange({rowFrom:r,rowTo:r,colFrom:c,colTo:c}).setValue2('')`，然后 `isEmpty()` 应为 true |
 
 ## 使用前提
 
