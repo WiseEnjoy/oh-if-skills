@@ -6,11 +6,12 @@ from __future__ import annotations
 import argparse
 import html
 import json
+import re
 import subprocess
 import sys
 import time
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Callable
 from zoneinfo import ZoneInfo
@@ -108,6 +109,16 @@ def parse_args() -> argparse.Namespace:
 
     paths = subparsers.add_parser("paths", help="Print conventional paths for a report date")
     add_common_arguments(paths)
+
+    clean = subparsers.add_parser("clean", help="Prune transient work files older than a retention window")
+    add_common_arguments(clean)
+    clean.add_argument(
+        "--keep-days",
+        type=int,
+        default=14,
+        help="Days of transient acquisition files to retain; curated JSONs and the verification ledger are always kept",
+    )
+    clean.add_argument("--dry-run", action="store_true", help="List what would be removed without deleting")
 
     return parser.parse_args()
 
@@ -612,6 +623,73 @@ def print_paths(args: argparse.Namespace) -> int:
     return 0
 
 
+PRESERVED_WORK_FILES = ("verification-ledger.json",)
+PRESERVED_WORK_PREFIXES = (
+    "inference-radar-curated-",
+    "llm-inference-foundations-deep-",
+)
+TRANSIENT_WORK_PREFIXES = (
+    "inference-radar-llm-cann-",
+    "inference-radar-llm-frameworks-",
+    "inference-radar-web-sources-",
+    "inference-radar-codex-candidates-",
+    "inference-radar-acquisition-summary-",
+    "daily-run-metrics-",
+    "llm-inference-foundations-podcasts-",
+)
+WORK_DATE_RE = re.compile(r"(\d{4}-\d{2}-\d{2})\.json$")
+
+
+def clean_work_dir(args: argparse.Namespace) -> int:
+    """Prune transient acquisition files past the retention window.
+
+    Curated radar/deep JSONs and verification-ledger.json are permanent: they
+    feed seen-before history marking and the cross-day verification ledger.
+    Everything else in work/ keyed by a date suffix is transient.
+    """
+    if args.keep_days <= 0:
+        raise SystemExit("--keep-days must be positive")
+    cutoff = datetime.strptime(args.date, "%Y-%m-%d").date() - timedelta(days=args.keep_days)
+    removed: list[dict[str, Any]] = []
+    removed_bytes = 0
+    kept_bytes = 0
+    for entry in sorted(args.work_dir.iterdir()):
+        if not entry.is_file():
+            continue
+        name = entry.name
+        if name in PRESERVED_WORK_FILES or name.startswith(PRESERVED_WORK_PREFIXES):
+            kept_bytes += entry.stat().st_size
+            continue
+        if not name.startswith(TRANSIENT_WORK_PREFIXES):
+            continue
+        match = WORK_DATE_RE.search(name)
+        if not match:
+            continue
+        try:
+            file_date = datetime.strptime(match.group(1), "%Y-%m-%d").date()
+        except ValueError:
+            continue
+        size = entry.stat().st_size
+        if file_date > cutoff:
+            kept_bytes += size
+            continue
+        removed_bytes += size
+        removed.append({"path": str(entry), "date": match.group(1), "size_bytes": size})
+        if not args.dry_run:
+            entry.unlink()
+    print(json.dumps({
+        "work_dir": str(args.work_dir),
+        "keep_days": args.keep_days,
+        "cutoff_date": cutoff.isoformat(),
+        "dry_run": args.dry_run,
+        "removed_count": len(removed),
+        "removed_bytes": removed_bytes,
+        "kept_bytes": kept_bytes,
+        "removed": removed,
+    }, ensure_ascii=False, indent=2))
+    return 0
+
+
 def main() -> int:
     args = parse_args()
     validate_common(args)
@@ -621,6 +699,8 @@ def main() -> int:
         return render(args)
     if args.command == "inspect":
         return inspect_inputs(args)
+    if args.command == "clean":
+        return clean_work_dir(args)
     return print_paths(args)
 
 

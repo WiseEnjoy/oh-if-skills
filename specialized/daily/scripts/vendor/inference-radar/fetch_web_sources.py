@@ -34,32 +34,6 @@ SOURCES: list[dict[str, Any]] = [
         "tier": "tier2",
     },
     {
-        "key": "lobsters-llm-inference",
-        "name": "Lobsters",
-        "kind": "lobsters",
-        "category": "communities",
-        "host": "lobste.rs",
-        "tier": "tier2",
-    },
-    {
-        "key": "reddit-localllama",
-        "name": "Reddit r/LocalLLaMA",
-        "kind": "reddit",
-        "category": "communities",
-        "host": "www.reddit.com",
-        "subreddit": "LocalLLaMA",
-        "tier": "tier2",
-    },
-    {
-        "key": "reddit-machinelearning",
-        "name": "Reddit r/MachineLearning",
-        "kind": "reddit",
-        "category": "communities",
-        "host": "www.reddit.com",
-        "subreddit": "MachineLearning",
-        "tier": "tier2",
-    },
-    {
         "key": "arxiv-llm-inference",
         "name": "arXiv LLM inference",
         "kind": "arxiv",
@@ -72,14 +46,6 @@ SOURCES: list[dict[str, Any]] = [
         "tier": "tier2",
     },
     {
-        "key": "huggingface-papers",
-        "name": "Hugging Face Daily Papers",
-        "kind": "huggingface_papers",
-        "category": "papers",
-        "host": "huggingface.co",
-        "tier": "tier2",
-    },
-    {
         "key": "vllm-blog",
         "name": "vLLM blog",
         "kind": "rss",
@@ -88,27 +54,11 @@ SOURCES: list[dict[str, Any]] = [
         "tier": "tier2",
     },
     {
-        "key": "huggingface-blog",
-        "name": "Hugging Face blog",
-        "kind": "rss",
-        "category": "engineering_blogs",
-        "feed": "https://huggingface.co/blog/feed.xml",
-        "tier": "tier2",
-    },
-    {
         "key": "pytorch-blog",
         "name": "PyTorch blog",
         "kind": "rss",
         "category": "engineering_blogs",
         "feed": "https://pytorch.org/blog/feed.xml",
-        "tier": "tier2",
-    },
-    {
-        "key": "nvidia-developer-blog",
-        "name": "NVIDIA Technical Blog",
-        "kind": "rss",
-        "category": "engineering_blogs",
-        "feed": "https://developer.nvidia.com/blog/feed/",
         "tier": "tier2",
     },
     {
@@ -128,27 +78,11 @@ SOURCES: list[dict[str, Any]] = [
         "tier": "tier2",
     },
     {
-        "key": "jiqizhixin",
-        "name": "机器之心",
-        "kind": "rss",
-        "category": "chinese_tech_media",
-        "feed": "https://www.jiqizhixin.com/rss",
-        "tier": "tier2",
-    },
-    {
         "key": "qbitai",
         "name": "量子位",
         "kind": "rss",
         "category": "chinese_tech_media",
         "feed": "https://www.qbitai.com/feed",
-        "tier": "tier2",
-    },
-    {
-        "key": "infoq-cn",
-        "name": "InfoQ 中国",
-        "kind": "rss",
-        "category": "chinese_tech_media",
-        "feed": "https://www.infoq.cn/rss/news.xml",
         "tier": "tier2",
     },
     {
@@ -750,8 +684,12 @@ def fetch_gitcode_search(
     allowed_orgs = {"ascend", "mindspore", "cann"}
     for query in source["queries"]:
         params = urllib.parse.urlencode({"q": query})
+        headers = {}
+        token = os.environ.get("GITCODE_TOKEN")
+        if token:
+            headers["Authorization"] = f"Bearer {token}"
         try:
-            payload = fetch_json(f"https://gitcode.com/api/v5/search/issues?{params}", timeout)
+            payload = fetch_json(f"https://gitcode.com/api/v5/search/issues?{params}", timeout, headers=headers or None)
         except Exception as exc:
             errors.append(f"{query}: {exc}")
             continue

@@ -15,12 +15,12 @@ CATEGORY_SOURCES = {
     "frameworks": {"pytorch", "torch_npu"},
     "operators": {"cann-ops-math", "cann-ops-transformer", "cann-ops-nn", "cann-ops-cv", "cann-pypto"},
     "communications": {"hccl", "hcomm"},
-    "podcasts": {"practical-ai", "latent-space", "mlst", "dwarkesh", "twiml"},
-    "communities": {"hackernews-llm-inference", "lobsters-llm-inference", "reddit-localllama", "reddit-machinelearning"},
-    "papers": {"arxiv-llm-inference", "huggingface-papers"},
-    "engineering_blogs": {"vllm-blog", "huggingface-blog", "pytorch-blog", "nvidia-developer-blog",
+    "podcasts": {"practical-ai", "mlst"},
+    "communities": {"hackernews-llm-inference"},
+    "papers": {"arxiv-llm-inference"},
+    "engineering_blogs": {"vllm-blog", "pytorch-blog",
                            "semianalysis", "interconnects"},
-    "chinese_tech_media": {"jiqizhixin", "qbitai", "infoq-cn"},
+    "chinese_tech_media": {"qbitai"},
     "huawei_communities": {
         "hiascend-forum", "mindspore-discuss", "mindspore-blog", "gitcode-huawei-issues"
     },

@@ -52,7 +52,7 @@ class SourceRegistryTests(unittest.TestCase):
             self.assertIn(key, self.build_report.SOURCE_WEIGHT)
 
     def test_reference_web_sources_registered(self):
-        expected = {"huggingface-papers", "semianalysis", "interconnects", "qwen-blog"}
+        expected = {"arxiv-llm-inference", "semianalysis", "interconnects", "qwen-blog"}
         fetch_keys = {source["key"] for source in self.fetch_web.SOURCES}
         self.assertTrue(expected <= fetch_keys, f"missing web sources: {expected - fetch_keys}")
         for key in expected:

@@ -30,36 +30,12 @@ SOURCES = [
         "track": "accessible AI concepts and applied context",
     },
     {
-        "key": "latent-space",
-        "name": "Latent Space",
-        "feed": "https://www.latent.space/feed",
-        "difficulty": "进阶",
-        "phase": [2, 3, 4],
-        "track": "AI engineering, infrastructure, and systems",
-    },
-    {
-        "key": "twiml",
-        "name": "TWIML AI",
-        "feed": "https://twimlai.com/feed/",
-        "difficulty": "进阶",
-        "phase": [3, 4],
-        "track": "applied ML platforms, infrastructure, and operations",
-    },
-    {
         "key": "mlst",
         "name": "Machine Learning Street Talk",
         "feed": "https://www.mlst.ai/feed",
         "difficulty": "高阶",
         "phase": [4],
         "track": "technical AI debates and research context",
-    },
-    {
-        "key": "dwarkesh",
-        "name": "Dwarkesh Patel",
-        "feed": "https://www.dwarkesh.com/feed",
-        "difficulty": "高阶",
-        "phase": [4],
-        "track": "compute economics and frontier AI research",
     },
 ]
 
