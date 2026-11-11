@@ -458,7 +458,22 @@ def token_for(host: str) -> str | None:
         except (OSError, subprocess.TimeoutExpired):
             pass
         return None
-    return os.environ.get("GITCODE_TOKEN")
+    token = os.environ.get("GITCODE_TOKEN")
+    if token:
+        return token
+    try:
+        proc = subprocess.run(
+            ["security", "find-generic-password", "-a", "codex", "-s", "gitcode-token", "-w"],
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=2,
+        )
+        if proc.returncode == 0 and proc.stdout.strip():
+            return proc.stdout.strip()
+    except (OSError, subprocess.TimeoutExpired):
+        pass
+    return None
 
 
 def append_query(url: str, params: dict[str, Any]) -> str:

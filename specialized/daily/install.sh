@@ -36,6 +36,11 @@ fi
 # (gitcode.com/api/v5/search/issues). Without it that source times out.
 gc_status="absent"
 [ -n "${GITCODE_TOKEN:-}" ] && gc_status="env"
+if [ "$gc_status" = "absent" ]; then
+  if security find-generic-password -a codex -s gitcode-token >/dev/null 2>&1; then
+    gc_status="keychain"
+  fi
+fi
 
 echo
 echo "tokens:"

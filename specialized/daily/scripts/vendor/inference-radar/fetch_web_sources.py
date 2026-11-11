@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import ssl
 import subprocess
@@ -686,6 +687,16 @@ def fetch_gitcode_search(
         params = urllib.parse.urlencode({"q": query})
         headers = {}
         token = os.environ.get("GITCODE_TOKEN")
+        if not token:
+            try:
+                proc = subprocess.run(
+                    ["security", "find-generic-password", "-a", "codex", "-s", "gitcode-token", "-w"],
+                    check=False, capture_output=True, text=True, timeout=2,
+                )
+                if proc.returncode == 0 and proc.stdout.strip():
+                    token = proc.stdout.strip()
+            except (OSError, subprocess.TimeoutExpired):
+                pass
         if token:
             headers["Authorization"] = f"Bearer {token}"
         try:
