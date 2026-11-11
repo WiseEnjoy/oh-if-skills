@@ -1,6 +1,6 @@
 ---
 name: opencode-skills-sync
-description: "维护并发布本技能仓：软链接安装模型（各 agent 技能目录直链仓库克隆，改仓库即生效，不存在本地版与公共版两份；opencode/joycode/codex 挂分类级，Claude Code 只认一级目录必须逐技能挂，用 sync-links.sh 幂等补链）、技能目录契约（name 等于目录名、依赖段 + install.sh、输出范式块、单一权威来源）、YAML frontmatter 硬规则与校验脚本（description 必须整体加双引号，否则 GitHub 报 mapping values are not allowed here）、发布前脱敏扫描与故障速查。触发词：同步技能、推 skills、SKILL.md 报 yaml 语法错误、修 frontmatter、新增技能。"
+description: "维护并发布本技能仓：软链接安装模型（各 agent 技能目录直链仓库克隆，改仓库即生效，不存在本地版与公共版两份；opencode/joycode/codex 挂分类级，Claude Code 只认一级目录必须逐技能挂，用仓库根目录的 install-links.sh 幂等补链）、技能目录契约（name 等于目录名、依赖段 + install.sh、输出范式块、单一权威来源）、YAML frontmatter 硬规则与校验脚本（description 必须整体加双引号，否则 GitHub 报 mapping values are not allowed here）、发布前脱敏扫描与故障速查。触发词：同步技能、推 skills、SKILL.md 报 yaml 语法错误、修 frontmatter、新增技能。"
 ---
 
 # opencode-skills-sync（opencode 全局技能同步 + YAML frontmatter 校验）
@@ -120,7 +120,8 @@ done
 `~/.claude/skills/<分类>/<name>/SKILL.md` 始终不出现）。所以分类级软链接在 Claude Code 侧
 **不成立**，别再试着统一成分类级。
 
-**补链不靠人记**：`bash <本skill目录>/sync-links.sh`。幂等，可随时重跑——
+**补链不靠人记**：`bash <本仓库克隆目录>/install-links.sh`（仓库根目录，**唯一的链接脚本**，
+别再在技能目录里另写一个）。幂等，可随时重跑——
 挂全部分类级链接、为每个技能补 Claude Code 侧逐技能链接、清理指向本仓的悬空链接，
 并跳过非本仓的真实目录（不覆盖别处安装的同名技能）。**新增或删除技能后跑一次即可。**
 
@@ -134,7 +135,7 @@ done
 流程：
 
 1. 改完跑第二节的 YAML 校验脚本，全部技能 OK。
-2. 新增或删除技能后，跑 `bash <本skill目录>/sync-links.sh` 补链（幂等，可重复跑）。
+2. 新增或删除技能后，跑 `bash <本仓库克隆目录>/install-links.sh` 补链（幂等，可重复跑）。
 3. 跑脱敏扫描，0 命中。清单文件 `~/.config/opencode/leak-scan.txt` 存在就照它的字面量 grep；
    **文件不存在时不要跳过这一步**，改用通用模式扫一遍改动文件（命中后逐条对第三节的表判断）：
 
@@ -157,4 +158,4 @@ done
 | `Connection to ssh.github.com closed by remote host` | 该环境 SSH 到 GitHub 不通（**不是所有机器都这样，macOS 宿主机实测 SSH 可用**） | 换 HTTPS 重试，细节见 `specialized/gitcode-github-pr` |
 | push/clone 报 `Failed to connect to github.com port 443` | DNS 解析到不可达 IP（`github.com` 的 A 记录抖动） | `curl --resolve github.com:443:140.82.112.3` 探活，可用就临时写 `/etc/hosts`，push 完删掉 |
 | 覆盖公共仓后出现内网信息 | 直接 cp 本地文件 | 立刻 revert，按第三节重新脱敏后再发 |
-| 新技能在 Claude Code 里不出现（其他 agent 正常） | Claude Code 只认一级目录，没补逐技能链接 | 跑 `sync-links.sh` |
+| 新技能在 Claude Code 里不出现（其他 agent 正常） | Claude Code 只认一级目录，没补逐技能链接 | 跑仓库根目录的 `install-links.sh` |
