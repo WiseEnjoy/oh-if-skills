@@ -40,6 +40,10 @@ description: "把 vbench 测试结果的真实原始数据录入 JoySpace 表格
 ## 三步流程（全脚本化）
 
 ```bash
+# 两个脚本在本技能目录下：<本skill目录>/scripts/（<本skill目录> = skill 工具输出里的
+# Base directory for this skill）。在测试服务器上执行，先把 scripts/ 拷过去。
+# rows.json 由你按下面 ② 的格式自己写，描述要填哪些行、对应哪个场景目录和 SLA。
+
 # ① 选优（服务器执行；rows.json 同时声明场景目录和 SLA）
 python3 refresh_best_mean.py rows.json
 # 规则：每档合并全部有效轮(completed==num_prompts)的 ttfts 算 mean，mean<SLA 才合格；

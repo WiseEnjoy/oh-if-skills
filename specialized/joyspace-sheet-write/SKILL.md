@@ -131,5 +131,6 @@ JoySpace 表格在浏览器里是 WPS 嵌入式表格，单元格读写靠内部
 
 ## 从 vbench 测试结果机械填表（零人工转录）
 
-bench 结果录入 JoySpace 表格的完整口径、选优规则与三步流程见 **joyspace-bench-table** 技能
-（scripts/refresh_best_mean.py + fill_from_bench.py 已迁移至该技能）。
+bench 结果录入 JoySpace 表格的完整口径、选优规则与三步流程见 `specialized/joyspace-bench-table`
+技能，两个脚本在 `specialized/joyspace-bench-table/scripts/`（`refresh_best_mean.py` 选优、
+`fill_from_bench.py` 生成载荷与 JS）。本技能只负责"怎么把值写进单元格"。

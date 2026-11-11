@@ -34,7 +34,13 @@ description: "gitcode.com 与 github.com 的 PR 操作：token 存放与调用�
 
 ## GitCode（gitcode.com）— xLLM 仓库主平台
 
-- Token：读本机私有文件（600 权限），路径用 `TOKEN_FILE` 指向实际位置（历史位置 `~/.config/<agent>/gitcode-token`）；缺失时向用户要。**绝不**把 token 打进日志、提交、PR 描述或回显给用户；命令里引用文件即可。
+- Token：读本机私有文件（600 权限）。下文命令里的 `$TOKEN_FILE` **不是环境自带的变量，要你自己先定值**：
+  ```bash
+  TOKEN_FILE=~/.config/<agent>/gitcode-token   # 历史位置，按实际落点改
+  test -r "$TOKEN_FILE" || echo "token 文件不存在，向用户索要后再继续"
+  ```
+  找不到就直接问用户要，**不要**去日志、历史命令里翻。**绝不**把 token 打进日志、提交、
+  PR 描述或回显给用户；命令里只引用文件。
 - API base：`https://api.gitcode.com/api/v5`（Gitee v5 兼容）。机器环境自带 `https_proxy`，curl 直接可用。
 - owner/repo 从 remote URL 解析：`git remote get-url <name>`，去掉 `git@` / `https://` 前缀与 `.git` 后缀。
 - 发 PR 前先确认已推送且远端与本地一致：

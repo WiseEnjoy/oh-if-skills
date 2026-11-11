@@ -134,11 +134,18 @@ done
 流程：
 
 1. 改完跑第二节的 YAML 校验脚本，全部技能 OK。
-1. 新增/删除技能的话，跑 `bash <本skill目录>/sync-links.sh` 补链（幂等）。
-2. 跑脱敏扫描（照 `~/.config/opencode/leak-scan.txt` 的字面量清单 grep），0 命中。
-3. 提交信息用 `type: 小写描述.`（≥4 词、句号结尾）。
-4. push 按 `gitcode-github-pr` skill 的 GitHub 规则（**去代理直连 + 临时 GIT_CONFIG_GLOBAL + extraHeader**）。
-5. push 后 `git fetch` 复核远端 sha 等于本地。
+2. 新增或删除技能后，跑 `bash <本skill目录>/sync-links.sh` 补链（幂等，可重复跑）。
+3. 跑脱敏扫描，0 命中。清单文件 `~/.config/opencode/leak-scan.txt` 存在就照它的字面量 grep；
+   **文件不存在时不要跳过这一步**，改用通用模式扫一遍改动文件（命中后逐条对第三节的表判断）：
+
+   ```bash
+   grep -nE '/Users/[a-z]|/home/[a-z]|\b(10|11)\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\b|[A-Za-z0-9_-]{32,}' <改动的文件...>
+   ```
+
+4. 提交信息用 `type: 小写描述.`（≥4 词、句号结尾）。
+5. push：先按常规方式 `git push origin main`。失败了再按 `specialized/gitcode-github-pr`
+   的「clone / push 失败后的绕法」判断是否适用——那套绕法绑定特定内网环境，**不要预先套用**。
+6. push 后 `git ls-remote origin refs/heads/main` 的 sha 必须等于本地 `git rev-parse main`。
 
 ## 五、常见故障速查
 
@@ -147,7 +154,7 @@ done
 | GitHub 页面 SKILL.md 报 yaml 错误 | description 含 `: ` 未加引号 | 按第二节修 frontmatter |
 | push 报 `CONNECT tunnel failed, response 503` | 走了 `https_proxy` | `env -u https_proxy -u http_proxy` |
 | push 到 `gh-proxy.com/...` 报错/只读 | `~/.gitconfig` 的 insteadOf 改写 | `GIT_CONFIG_GLOBAL=<临时config>` 整体替换 |
-| `Connection to ssh.github.com closed by remote host` | 本机 SSH 到 GitHub 不可用 | 别修了，直接走 HTTPS（见 gitcode-github-pr skill 的连通性表） |
+| `Connection to ssh.github.com closed by remote host` | 该环境 SSH 到 GitHub 不通（**不是所有机器都这样，macOS 宿主机实测 SSH 可用**） | 换 HTTPS 重试，细节见 `specialized/gitcode-github-pr` |
 | push/clone 报 `Failed to connect to github.com port 443` | DNS 解析到不可达 IP（`github.com` 的 A 记录抖动） | `curl --resolve github.com:443:140.82.112.3` 探活，可用就临时写 `/etc/hosts`，push 完删掉 |
 | 覆盖公共仓后出现内网信息 | 直接 cp 本地文件 | 立刻 revert，按第三节重新脱敏后再发 |
 | 新技能在 Claude Code 里不出现（其他 agent 正常） | Claude Code 只认一级目录，没补逐技能链接 | 跑 `sync-links.sh` |
