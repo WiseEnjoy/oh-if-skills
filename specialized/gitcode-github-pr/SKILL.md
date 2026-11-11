@@ -1,6 +1,6 @@
 ---
 name: gitcode-github-pr
-description: "gitcode.com 与 github.com 的 PR 操作：token 存放与调用（不进 URL、不进日志）、fork 跨仓库 head/base 方向、GitHub 本机连通实测结论（SSH 不可用、必须去代理直连 HTTPS、DNS 解析到坏 IP 的处置）、用临时 GIT_CONFIG_GLOBAL 绕开 gh-proxy 改写、gh CLI 用法。分支生命周期与 PR 标题正文规范见 common/pr-mr-workflow。触发词：发起PR、建PR、提PR、查看PR、合并请求。"
+description: "gitcode.com 与 github.com 的 PR 操作：token 存放与调用（不进 URL、不进日志，且不是 git 操作的默认前提）、fork 跨仓库 head/base 方向、gh CLI 用法，以及 clone/push 失败后的排障——连通性与代理绕行（去代理直连、临时 GIT_CONFIG_GLOBAL 绕 gh-proxy 改写、坏 IP 的 DNS 处置）属于特定内网环境的实测结论，默认先按常规方式推，失败了再判断是否适用。分支生命周期与 PR 标题正文规范见 common/pr-mr-workflow。触发词：发起PR、建PR、提PR、查看PR、合并请求。"
 ---
 
 # gitcode-github-pr（gitcode / github PR 操作）
@@ -78,14 +78,29 @@ curl -s "https://api.gitcode.com/api/v5/repos/<owner>/<repo>/pulls/<number>/file
 
 ## GitHub 平台
 
-### 连通性硬规则（本机实测，别再逐个试）
+### 连通性：默认按常规方式走，失败了再查下面的环境专有处置
 
-| 通道 | 实测结果 | 结论 |
+**默认动作**：直接用仓库现有 remote 和全局 git 配置 `git clone` / `git push` / `git fetch`，
+**不要预先套任何绕行**（不加 `env -u https_proxy`、不换临时 `GIT_CONFIG_GLOBAL`、不加 extraHeader）。
+通了就结束。
+
+**只有常规方式真的报错时**，才拿错误信息到下面两节对号入座。下面的结论**绑定具体环境**，
+不是本技能的默认前提——照着预先套，就会把一条通路改成不通，或者把简单操作搞成一串绕行命令。
+
+> 反例（2026-11-11，macOS 宿主机）：`origin` 是 `git@github.com:...` 的 SSH remote，
+> `git push --force-with-lease origin main` 一次成功（走用户的全局代理配置）。
+> 此前曾按下表预先判定"SSH 不可用、必须去代理直连 + 临时 config + extraHeader"并据此向用户
+> 给出整套绕行命令——**那是把别的环境的实测当成了本机结论**，用户当场纠正。
+> 教训：连通性属于环境事实，必须先试后断言；没在当前环境跑过，就不要向用户陈述为结论。
+
+#### 环境专有现象（内网 Linux 容器 / opencode 环境实测，**非通用**）
+
+| 通道 | 该环境实测结果 | 该环境下的结论 |
 | --- | --- | --- |
-| SSH `git@github.com`（`~/.ssh/config` 走 `<internal-proxy-host>` ProxyCommand） | 握手 + publickey 认证成功，随即远端断会话：`Connection to ssh.github.com closed by remote host` | **不可用**，git over SSH 放弃 |
-| SSH 直连 22 或 `ssh.github.com:443`（去掉 ProxyCommand） | `Bad packet length ... Connection corrupted`（链路注入） | **不可用** |
-| HTTPS 走环境 `https_proxy`（`<internal-proxy-host>`） | `CONNECT tunnel failed, response 503`（`github.com` 不在放行名单） | **不可用** |
-| HTTPS 去掉代理直连 `github.com` | 正常 | **clone / fetch / push / raw / API 一律用这条** |
+| SSH `git@github.com`（`~/.ssh/config` 走 `<internal-proxy-host>` ProxyCommand） | 握手 + publickey 认证成功，随即远端断会话：`Connection to ssh.github.com closed by remote host` | 该环境不可用，改走 HTTPS |
+| SSH 直连 22 或 `ssh.github.com:443`（去掉 ProxyCommand） | `Bad packet length ... Connection corrupted`（链路注入） | 该环境不可用 |
+| HTTPS 走环境 `https_proxy`（`<internal-proxy-host>`） | `CONNECT tunnel failed, response 503`（`github.com` 不在放行名单） | 该环境不可用 |
+| HTTPS 去掉代理直连 `github.com` | 正常 | **该环境**的 clone / fetch / push / raw / API 走这条 |
 
 - **DNS 偶发解析到不可达 IP**（实测 2026-09-30：`github.com` → `20.205.243.166` TCP 443 不通，
   而 `api.github.com` 的 `20.205.243.168` 和 `140.82.112.x` 都通）。表现：clone/push 报
@@ -96,24 +111,34 @@ curl -s "https://api.gitcode.com/api/v5/repos/<owner>/<repo>/pulls/<number>/file
   DNS 抖动期 `raw.githubusercontent.com` 直连同样超时——复验不必死磕直连：
   **fetch 走 origin 的 gh-proxy URL**（环境代理下稳定，且能下载真实对象核对 sha），
   raw 走 gh-proxy 镜像 `https://gh-proxy.com/https://raw.githubusercontent.com/...`。
-- `api.github.com` 两种通道都通；`gh-proxy.com` 只读下载代理，只能 clone 公开仓，**不能 push**。
-- 环境 `https_proxy` 对 gitcode 正常、对 github push 会 503——GitHub 操作统一 `env -u https_proxy -u http_proxy -u HTTPS_PROXY -u HTTP_PROXY`。
+- 该环境下 `api.github.com` 两种通道都通；`gh-proxy.com` 作为只读下载代理只能 clone 公开仓，
+  当时实测不能 push（**此结论也只对那个环境成立，别拿它去否定用户机器上的代理配置**）。
+- 该环境 `https_proxy` 对 gitcode 正常、对 github push 会 503，所以那里的 GitHub 操作要
+  `env -u https_proxy -u http_proxy -u HTTPS_PROXY -u HTTP_PROXY`；其他环境不要默认加。
 
 ### Token 与认证
 
 - PAT 同样存本机私有文件（600），用 `TOKEN_FILE` 指向；缺失时向用户要，**不要**去日志里翻。
-- **绝不**把 token 拼进 remote URL、命令回显、日志、commit、PR 描述；一律用 `-c http.extraHeader`（token 不进 URL、不进 `.git/config`）。
-- 本机 credential helper（VS Code remote-containers）注册在 `~/.gitconfig`——**交互式终端**里 `git push` 可直接用；
-  **非交互 shell**（opencode 等）下取不到凭据（实测报 `could not read Username`），此时用 token 文件 + extraHeader。
+- **绝不**把 token 拼进 remote URL、命令回显、日志、commit、PR 描述。
+- **token 不是 git 操作的默认前提**：SSH remote、credential helper、用户自己的代理配置都可能让
+  `git push` 直接成功，此时一个 token 都不需要。**先试常规 push**；只有在报
+  `could not read Username`、`Authentication failed`、`403` 这类凭据错误时才取 token，
+  并且用 `-c http.extraHeader`（token 不进 URL、不进 `.git/config`）。
+- 已知的凭据失败场景：credential helper（VS Code remote-containers）注册在 `~/.gitconfig`，
+  **交互式终端**能用，**非交互 shell**（opencode 等）下取不到（实测 `could not read Username`）——
+  这种情况才用 token 文件 + extraHeader。
 
-### clone / push（必须同时绕开 gh-proxy 改写 + 去代理）
+### clone / push 失败后的绕法（环境专有，默认不要用）
 
-`~/.gitconfig` 有 `url.https://gh-proxy.com/github.insteadof=https://github`，会把 push 也改写到只读代理，
-所以用临时 global config 整体替换掉全局配置：
+**先跑 `git push origin <branch>` / `git clone <url>`；成功就到此为止，下面这套一行都不要用。**
+
+只有在常规方式失败、且失败原因对上了上面那张环境表时才用这套。它针对的是这样一个环境：
+`~/.gitconfig` 里有 `url.https://gh-proxy.com/github.insteadof=https://github`，把 push 也改写到
+只读代理，同时环境 `https_proxy` 对 github 返回 503——所以要用临时 global config 整体替换全局配置：
 
 ```bash
 TOKEN=$(cat "$TOKEN_FILE")
-AUTH=$(printf 'x-access-token:%s' "$TOKEN" | base64 -w0)
+AUTH=$(printf 'x-access-token:%s' "$TOKEN" | base64 | tr -d '\n')
 printf '[user]\n\tname = <your-name>\n\temail = <your-email>\n[safe]\n\tdirectory = *\n' > /tmp/oc-gitconfig
 
 # clone
@@ -131,7 +156,9 @@ env -u https_proxy -u http_proxy curl -sS -H "Authorization: Bearer $TOKEN" \
 
 - push 后必须复核：`git fetch` 后 `git rev-parse origin/<branch>` 等于本地 sha，或直接打 raw URL 复验内容。
 - API 频率：匿名 60 次/时、带 token 5000 次/时——批量查询先带 token，别裸调。
-- `git ls-remote` 也要在 `env -u https_proxy` 下跑，否则同样 503。
+- 用了这套绕法时，`git ls-remote` 也要在同样的 `env -u https_proxy` 下跑，否则同样 503。
+- `base64 -w0` 是 GNU 写法，**macOS 上没有 `-w`**（报 `invalid option`）——跨环境统一写
+  `| base64 | tr -d '\n'`。
 
 ### gh CLI 用法
 
